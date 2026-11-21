@@ -575,12 +575,20 @@ static void debugPrintTelemetryPacket(space_packet_t *space_packet,
 
 static void transmitPacketRadioUSB(uint8_t *buffer, ssize_t buffer_len) {
   obcUSBTransmitFrame(buffer, buffer_len);
+#if !FLATSAT_NO_RADIO
   downlinkRadioTransmitNBlock(buffer, buffer_len);
+#endif
 }
 
 static bool transmitPacketRadioUSBBlock(uint8_t *buffer, ssize_t buffer_len) {
   obcUSBTransmitFrame(buffer, buffer_len);
+#if FLATSAT_NO_RADIO
+  /* USB carried it. Nothing left to do, and the caller's contract is "did the
+   * frame go out", which it did. */
+  return true;
+#else
   return downlinkRadioTransmit(buffer, buffer_len);
+#endif
 }
 
 static uint16_t packetTotalLen(space_packet_t *space_packet) {
@@ -1553,8 +1561,18 @@ void commandApidHandler(space_packet_t *space_packet, command_source_t source) {
       return;
     }
     const uint16_t total_len = packetTotalLen(&tm_packet);
+#if FLATSAT_NO_RADIO
+    /* The relay is attack 02 and the vulnerability is untouched: the command
+     * is still accepted, still unauthenticated, still length-unchecked, and
+     * the IDS still sees it. What does not happen is the transmission. */
+    (void)total_len;
+    Serial.printf("[WARN] BROADCAST_MSG accepted but not transmitted: "
+                  "radio disabled in this build (%u MHz)\r\n", frequency);
+    telemetrySPPTransmitError("BROADCAST RADIO DISABLED");
+#else
     downlinkRadioTransmitBroadcast(frequency, (uint8_t *)&tm_packet,
                                    total_len);
+#endif
     debugPrintTelemetryPacket(&tm_packet, "PAYLOAD_BROADCAST");
     logger_spp(&tm_packet);
   } else if (apid == SPP_APID_TC_FLASH) {
