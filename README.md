@@ -53,3 +53,17 @@ Simulated environment (space-like):
   each axis. Its temperature tracks the skin temperature with a lag.
 - Tunables: `FLATSAT_SIM_T_HOT_C`, `FLATSAT_SIM_T_COLD_C`,
   `FLATSAT_SIM_T_TAU_S`, `FLATSAT_SIM_ECLIPSE_FRACTION`.
+
+## Screen pages
+
+Press the BOOT button on the RP2350-GEEK to switch pages (the page number is
+shown at the top, e.g. `2/3`):
+
+1. **Status**: mode, links, sensors, last command, telemetry, position.
+2. **Attack scoreboard**: eight milestones (recon, mode change, ground-station
+   auth, flash read, AES config, debug on, payload armed, thruster). Command
+   milestones tick when the command is received; GS AUTH, DEBUG ON and ARMED tick
+   when the satellite is really in that state. A newly reached milestone is
+   highlighted for 3 s. Counters reset on reboot.
+3. **System**: reset reason (power-on / watchdog or soft reset via RESETC /
+   brown-out / RUN pin), uptime, free heap, TM and command counts, environment.

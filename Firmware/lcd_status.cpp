@@ -25,6 +25,9 @@
 #include <Adafruit_TinyUSB.h>
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
+#include "hardware/watchdog.h"
+#include "hardware/structs/powman.h"
+#include "hardware/regs/powman.h"
 
 #define LCD_DC 8
 #define LCD_CS 9
@@ -61,6 +64,60 @@ static uint8_t last_source = 0;
 static bool have_cmd = false;
 static unsigned long last_cmd_ms = 0;
 static unsigned long last_draw_ms = 0;
+static uint32_t usb_cmds = 0;
+static uint32_t rf_cmds = 0;
+
+/* Pages, switched with the BOOT button. */
+#define LCD_PAGES 3
+static uint8_t page = 0;
+static bool boot_was_down = false;
+static unsigned long boot_poll_ms = 0;
+
+/* Reset reason, captured once at start-up. */
+static const char *reset_reason = "unknown";
+
+/* Attack scoreboard: milestones a student reaches while attacking the
+ * satellite. Command milestones mean "the command was received"; state
+ * milestones mean the satellite is actually in that state. */
+enum {
+  MS_RECON,
+  MS_MODE,
+  MS_GS_AUTH,
+  MS_FLASH_RD,
+  MS_AES,
+  MS_DEBUG,
+  MS_ARMED,
+  MS_THRUSTER,
+  MS_COUNT
+};
+static const char *ms_names[MS_COUNT] = {"RECON",   "MODE CHG", "GS AUTH", "FLASH RD",
+                                         "AES CFG", "DEBUG ON", "ARMED",   "THRUSTER"};
+static bool ms_hit[MS_COUNT];
+static unsigned long ms_hit_ms[MS_COUNT];
+
+static void milestone(int id) {
+  if (!ms_hit[id]) {
+    ms_hit[id] = true;
+    ms_hit_ms[id] = millis();
+  }
+}
+
+static void captureResetReason(void) {
+  if (watchdog_caused_reboot()) {
+    reset_reason = "watchdog / soft reset";
+  } else {
+    const uint32_t r = powman_hw->chip_reset;
+    if (r & POWMAN_CHIP_RESET_HAD_POR_BITS) {
+      reset_reason = "power-on";
+    } else if (r & POWMAN_CHIP_RESET_HAD_BOR_BITS) {
+      reset_reason = "brown-out";
+    } else if (r & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS) {
+      reset_reason = "RUN pin";
+    } else {
+      reset_reason = "other";
+    }
+  }
+}
 
 static void lcdSelect(bool on) { gpio_put(LCD_CS, on ? 0 : 1); }
 
@@ -148,6 +205,7 @@ static void lcdPanelInit(void) {
 }
 
 void lcdStatusBegin(void) {
+  captureResetReason();
   canvas = new GFXcanvas16(LCD_W, LCD_H);
   if (canvas == NULL || canvas->getBuffer() == NULL) {
     return;
@@ -195,6 +253,25 @@ void lcdStatusNoteCommand(uint16_t apid, uint8_t source) {
   last_source = source;
   have_cmd = true;
   last_cmd_ms = millis();
+  if (source == 1) {
+    usb_cmds++;
+  } else {
+    rf_cmds++;
+  }
+  switch (apid) {
+  case SPP_APID_TC_PING:
+  case SPP_APID_TC_GET_STATUS:
+  case SPP_APID_TC_GET_NAV:
+  case SPP_APID_TC_GET_PAYLOAD_STATUS:
+  case SPP_APID_TC_GS_STATUS:
+    milestone(MS_RECON);
+    break;
+  case SPP_APID_TC_SET_MISSION_MODE: milestone(MS_MODE); break;
+  case SPP_APID_TC_FLASH_READ: milestone(MS_FLASH_RD); break;
+  case SPP_APID_TC_AES_CONFIG: milestone(MS_AES); break;
+  case SPP_APID_TC_SET_THRUSTER: milestone(MS_THRUSTER); break;
+  default: break;
+  }
 }
 
 void lcdStatusNoteTx(void) { tx_count++; }
@@ -254,18 +331,143 @@ static void chip(int16_t x, int16_t y, const char *label, uint16_t colour) {
 
 static int16_t chipWidth(const char *label) { return (int16_t)(strlen(label) * 6 + 8 + 4); }
 
+/* BOOT button (BOOTSEL) cycles the pages. Polled at most every 80 ms. */
+static bool pageButtonPressed(unsigned long now) {
+  if (now - boot_poll_ms < 80) {
+    return false;
+  }
+  boot_poll_ms = now;
+  const bool down = BOOTSEL;
+  const bool edge = down && !boot_was_down;
+  boot_was_down = down;
+  return edge;
+}
+
+static void pageScoreboard(unsigned long now) {
+  int score = 0;
+  for (int i = 0; i < MS_COUNT; i++) {
+    score += ms_hit[i] ? 1 : 0;
+  }
+  canvas->setTextSize(1);
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, 26);
+  canvas->print("ATTACK SCOREBOARD");
+  canvas->setTextSize(2);
+  canvas->setTextColor(score ? C_HIT : C_DIM);
+  canvas->setCursor(190, 23);
+  canvas->printf("%d/%d", score, MS_COUNT);
+
+  for (int i = 0; i < MS_COUNT; i++) {
+    const int col = i / 4;
+    const int row = i % 4;
+    const int16_t x = (int16_t)(6 + col * 120);
+    const int16_t y = (int16_t)(44 + row * 17);
+    const bool fresh = ms_hit[i] && (now - ms_hit_ms[i]) < 3000;
+    if (fresh) {
+      canvas->fillRect(x - 3, y - 3, 116, 15, C_HIT);
+    }
+    canvas->drawRect(x, y, 9, 9, ms_hit[i] ? (fresh ? C_BG : C_OK) : C_DIM);
+    if (ms_hit[i]) {
+      canvas->fillRect(x + 2, y + 2, 5, 5, fresh ? C_BG : C_OK);
+    }
+    canvas->setTextColor(fresh ? C_BG : (ms_hit[i] ? C_TEXT : C_DIM));
+    canvas->setCursor(x + 14, y + 1);
+    canvas->print(ms_names[i]);
+  }
+
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, 116);
+  canvas->printf("CMDS %lu  USB %lu  RF %lu", (unsigned long)cmd_count,
+                 (unsigned long)usb_cmds, (unsigned long)rf_cmds);
+  canvas->setCursor(6, 126);
+  canvas->print("GS AUTH / DEBUG / ARMED = real state");
+}
+
+static void pageSystem(unsigned long now, uint8_t sflags) {
+  canvas->setTextSize(1);
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, 26);
+  canvas->print("SYSTEM");
+
+  int16_t y = 40;
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, y);
+  canvas->print("RESET");
+  canvas->setTextColor(C_TEXT);
+  canvas->setCursor(60, y);
+  canvas->print(reset_reason);
+  y += 14;
+
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, y);
+  canvas->print("UPTIME");
+  canvas->setTextColor(C_TEXT);
+  canvas->setCursor(60, y);
+  const unsigned long s = now / 1000;
+  canvas->printf("%lud %02lu:%02lu:%02lu", s / 86400, (s / 3600) % 24, (s / 60) % 60, s % 60);
+  y += 14;
+
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, y);
+  canvas->print("HEAP");
+  canvas->setTextColor(C_TEXT);
+  canvas->setCursor(60, y);
+  canvas->printf("%lu B free", (unsigned long)rp2040.getFreeHeap());
+  y += 14;
+
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, y);
+  canvas->print("TM / CMD");
+  canvas->setTextColor(C_TEXT);
+  canvas->setCursor(60, y);
+  canvas->printf("%lu sent / %lu rcvd", (unsigned long)tx_count, (unsigned long)cmd_count);
+  y += 14;
+
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, y);
+  canvas->print("ENV");
+  canvas->setTextColor(C_TEXT);
+  canvas->setCursor(60, y);
+  float t, p, alt, h;
+  if ((sflags & MISSION_FLAG_BME_OK) && bmeRead(&t, &p, &alt, &h)) {
+    if (p < 1.0f) {
+      canvas->printf("%.1fC vacuum", t);
+    } else {
+      canvas->printf("%.1fC %.0fhPa %.0f%%", t, p, h);
+    }
+  } else {
+    canvas->print("no BME280");
+  }
+  y += 14;
+
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, 126);
+  canvas->print("BOOT button: next page");
+}
+
 void lcdStatusWorker(void) {
   if (!lcd_ready) {
     return;
   }
   const unsigned long now = millis();
-  if (now - last_draw_ms < 500) {
+
+  /* State milestones are checked on every call so a brief state is not missed. */
+  lcd_mission_t m;
+  lcdMissionSnapshot(&m);
+  if (m.gsSession) milestone(MS_GS_AUTH);
+  if (m.usbDebug) milestone(MS_DEBUG);
+  if (m.payloadArmed) milestone(MS_ARMED);
+
+  bool force = false;
+  if (pageButtonPressed(now)) {
+    page = (uint8_t)((page + 1) % LCD_PAGES);
+    force = true;
+  }
+  if (!force && now - last_draw_ms < 500) {
     return;
   }
   last_draw_ms = now;
 
-  lcd_mission_t m;
-  lcdMissionSnapshot(&m);
   const uint8_t sflags = sensorsStatusFlags();
   gps_nav_t nav;
   const bool gps_ok = gpsRead(&nav);
@@ -285,6 +487,20 @@ void lcdStatusWorker(void) {
   canvas->setTextSize(1);
   canvas->setCursor(LCD_W - 6 * 8 - 6, 6);
   canvas->printf("%02lu:%02lu:%02lu", (s / 3600) % 100, (s / 60) % 60, s % 60);
+  canvas->setCursor(150, 6);
+  canvas->setTextColor(C_TEXT);
+  canvas->printf("%u/%u", (unsigned)page + 1, (unsigned)LCD_PAGES);
+
+  if (page == 1) {
+    pageScoreboard(now);
+    lcdPush();
+    return;
+  }
+  if (page == 2) {
+    pageSystem(now, sflags);
+    lcdPush();
+    return;
+  }
 
   /* Mission mode */
   canvas->setTextSize(1);
