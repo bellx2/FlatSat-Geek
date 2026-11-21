@@ -450,7 +450,7 @@ static void pageSystem(unsigned long now, uint8_t sflags) {
   canvas->print("VERSION");
   canvas->setTextColor(C_TEXT);
   canvas->setCursor(60, y);
-  canvas->printf("%s  build %d  %s", FW_VERSION, (int)FW_BUILD_NUMBER, FW_BUILD_HASH);
+  canvas->printf("V%s  build %d  %s", FW_VERSION, (int)FW_BUILD_NUMBER, FW_BUILD_HASH);
   y += 13;
 
   canvas->setTextColor(C_DIM);
