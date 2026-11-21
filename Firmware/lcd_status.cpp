@@ -692,19 +692,31 @@ void lcdStatusWorker(void) {
     }
   }
 
-  /* Position */
+  /* Position (avoid printf %f — unreliable with multiple floats on this core) */
   canvas->setCursor(6, 126);
   if (gps_ok && nav.hasFix) {
-    const double lat = nav.latitudeE7 / 1e7;
-    const double lon = nav.longitudeE7 / 1e7;
-    const double alt_m = nav.altitudeCm / 100.0;
+    const float lat = (float)nav.latitudeE7 / 1e7f;
+    const float lon = (float)nav.longitudeE7 / 1e7f;
+    const float alt_m = (float)nav.altitudeCm / 100.0f;
     canvas->setTextColor(C_TEXT);
-    if (alt_m >= 10000.0) {
-      canvas->printf("%.3f%c %.3f%c  alt %.0fkm", fabs(lat), lat >= 0 ? 'N' : 'S',
-                     fabs(lon), lon >= 0 ? 'E' : 'W', alt_m / 1000.0);
+    if (alt_m >= 10000.0f) {
+      canvas->print(fabsf(lat), 3);
+      canvas->print(lat >= 0 ? 'N' : 'S');
+      canvas->print(' ');
+      canvas->print(fabsf(lon), 3);
+      canvas->print(lon >= 0 ? 'E' : 'W');
+      canvas->print("  alt ");
+      canvas->print((int)(alt_m / 1000.0f));
+      canvas->print("km");
     } else {
-      canvas->printf("%.4f%c %.4f%c  %.0fm", fabs(lat), lat >= 0 ? 'N' : 'S',
-                     fabs(lon), lon >= 0 ? 'E' : 'W', alt_m);
+      canvas->print(fabsf(lat), 4);
+      canvas->print(lat >= 0 ? 'N' : 'S');
+      canvas->print(' ');
+      canvas->print(fabsf(lon), 4);
+      canvas->print(lon >= 0 ? 'E' : 'W');
+      canvas->print("  ");
+      canvas->print((int)alt_m);
+      canvas->print("m");
     }
   } else {
     canvas->print("position: no fix");
