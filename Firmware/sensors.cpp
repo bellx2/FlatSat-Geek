@@ -39,13 +39,21 @@ static sensor_context_t s_context;
 #include <math.h>
 /* Simulated sensors (build flag -DFLATSAT_SIM_SENSORS=1): smooth, slowly
  * varying values so the board can be demonstrated without any sensor wired.
- * GPS: a ~2 km circular track. By default it is nowhere near the ground
- * station (so the GS access gate stays closed and the GPS-spoofing scenarios
- * still mean something); -DFLATSAT_SIM_GPS_INSIDE_GATE=1 puts it inside the
- * gate. A real GPS that delivers NMEA always takes priority. */
-#ifndef FLATSAT_SIM_GPS_INSIDE_GATE
-#define FLATSAT_SIM_GPS_INSIDE_GATE 0
+ * GPS (-DFLATSAT_SIM_GPS_MODE=n):
+ *   0 (default)  a satellite: circular orbit, ISS-like (see orbit_sim.h).
+ *                Time can be accelerated with -DFLATSAT_SIM_ORBIT_SPEEDUP=60.
+ *                The ground-station gate (35 km) only opens for a few seconds
+ *                when the ground track happens to pass over it.
+ *   1            small fixed track over the ground station: gate stays open.
+ *   2            small fixed track over Tokyo: gate stays closed.
+ * A real GPS that delivers NMEA always takes priority. */
+#ifndef FLATSAT_SIM_GPS_MODE
+#define FLATSAT_SIM_GPS_MODE 0
 #endif
+#ifndef FLATSAT_SIM_ORBIT_SPEEDUP
+#define FLATSAT_SIM_ORBIT_SPEEDUP 1.0
+#endif
+#include "orbit_sim.h"
 static float simWave(float period_s) {
   const float t = (float)(millis() % 3600000UL) / 1000.0f;
   return sinf(2.0f * (float)M_PI * fmodf(t, period_s) / period_s);
@@ -476,14 +484,24 @@ bool gpsRead(gps_nav_t *nav) {
   }
 
   const unsigned long now = millis();
-#if FLATSAT_SIM_GPS_INSIDE_GATE
+  double lat, lon, alt_m;
+#if FLATSAT_SIM_GPS_MODE == 0
+  orbit_state_t orb;
+  orbitState((double)now / 1000.0 * FLATSAT_SIM_ORBIT_SPEEDUP, &orb);
+  lat = orb.lat_deg;
+  lon = orb.lon_deg;
+  alt_m = orb.alt_m;
+#else
+#if FLATSAT_SIM_GPS_MODE == 1
   const double base_lat = 36.1699, base_lon = -115.1398; /* = GS position in worker.cpp */
 #else
   const double base_lat = 35.6812, base_lon = 139.7671;
 #endif
   const double phase = 2.0 * M_PI * fmod((double)now / 1000.0, 360.0) / 360.0;
-  const double lat = base_lat + 0.018 * sin(phase);
-  const double lon = base_lon + 0.018 * cos(phase);
+  lat = base_lat + 0.018 * sin(phase);
+  lon = base_lon + 0.018 * cos(phase);
+  alt_m = 40.0 + 1.5 * simWave(90.0f);
+#endif
   const unsigned long sec = now / 1000UL;
 
   memset(nav, 0, sizeof(*nav));
@@ -494,7 +512,7 @@ bool gpsRead(gps_nav_t *nav) {
   nav->hasDateTime = true;
   nav->latitudeE7 = (int32_t)(lat * 1e7);
   nav->longitudeE7 = (int32_t)(lon * 1e7);
-  nav->altitudeCm = 4000 + (int32_t)(150.0f * simWave(90.0f));
+  nav->altitudeCm = (int32_t)(alt_m * 100.0);
   nav->satellites = (uint8_t)(9 + (int)roundf(simWave(45.0f)));
   nav->utcHour = (uint8_t)((sec / 3600UL) % 24UL);
   nav->utcMinute = (uint8_t)((sec / 60UL) % 60UL);

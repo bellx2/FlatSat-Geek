@@ -21,6 +21,7 @@
 #include "mission.h"
 #include "sensors.h"
 #include <Adafruit_GFX.h>
+#include <math.h>
 #include <Adafruit_TinyUSB.h>
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
@@ -374,17 +375,35 @@ void lcdStatusWorker(void) {
   }
 
   /* Telemetry + environment */
-  const int16_t row_low = 118;
+  const int16_t row_low = 116;
   canvas->setTextSize(1);
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, row_low);
-  canvas->printf("TM sent %lu", (unsigned long)tx_count);
+  canvas->printf("TM %lu", (unsigned long)tx_count);
   if (sflags & MISSION_FLAG_BME_OK) {
     float t, p, alt, h;
     if (bmeRead(&t, &p, &alt, &h)) {
-      canvas->setCursor(110, row_low);
+      canvas->setCursor(96, row_low);
       canvas->printf("%.1fC %.0fhPa", t, p);
     }
+  }
+
+  /* Position */
+  canvas->setCursor(6, 126);
+  if (gps_ok && nav.hasFix) {
+    const double lat = nav.latitudeE7 / 1e7;
+    const double lon = nav.longitudeE7 / 1e7;
+    const double alt_m = nav.altitudeCm / 100.0;
+    canvas->setTextColor(C_TEXT);
+    if (alt_m >= 10000.0) {
+      canvas->printf("%.3f%c %.3f%c  alt %.0fkm", fabs(lat), lat >= 0 ? 'N' : 'S',
+                     fabs(lon), lon >= 0 ? 'E' : 'W', alt_m / 1000.0);
+    } else {
+      canvas->printf("%.4f%c %.4f%c  %.0fm", fabs(lat), lat >= 0 ? 'N' : 'S',
+                     fabs(lon), lon >= 0 ? 'E' : 'W', alt_m);
+    }
+  } else {
+    canvas->print("position: no fix");
   }
 
   lcdPush();
