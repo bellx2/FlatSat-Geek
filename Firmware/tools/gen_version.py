@@ -39,3 +39,17 @@ if os.path.exists(path):
 if old != text:
     with open(path, "w") as f:
         f.write(text)
+
+# version.hからFW_VERSIONを読んで出力ファイル名に反映
+import re
+
+version_h = os.path.join(proj, "version.h")
+fw_version = "unknown"
+if os.path.exists(version_h):
+    with open(version_h) as f:
+        m = re.search(r'#define\s+FW_VERSION\s+"([^"]+)"', f.read())
+        if m:
+            fw_version = m.group(1)
+
+env_name = env.subst("$PIOENV")  # noqa: F821
+env.Replace(PROGNAME="flatsat-%s-v%s" % (env_name, fw_version))  # noqa: F821
