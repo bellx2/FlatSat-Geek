@@ -42,7 +42,8 @@
 #define LCD_H 135
 /* 135x240 ST7789 panel inside a 240x320 controller RAM; landscape offsets. */
 #define LCD_X_OFFSET 40
-#define LCD_Y_OFFSET 53
+#define LCD_Y_OFFSET_NORMAL 53
+static bool lcd_flipped = false;
 
 #define RGB(r, g, b) ((uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3)))
 static const uint16_t C_BG = RGB(8, 10, 20);
@@ -137,9 +138,22 @@ static void lcdCommand(uint8_t cmd, const uint8_t *data, size_t len) {
 
 static void lcdCommand1(uint8_t cmd, uint8_t value) { lcdCommand(cmd, &value, 1); }
 
+static void lcdFlipBuffer(void) {
+  uint16_t *buf = canvas->getBuffer();
+  const int n = LCD_W * LCD_H;
+  for (int i = 0, j = n - 1; i < j; i++, j--) {
+    uint16_t tmp = buf[i];
+    buf[i] = buf[j];
+    buf[j] = tmp;
+  }
+}
+
 static void lcdPush(void) {
+  if (lcd_flipped) {
+    lcdFlipBuffer();
+  }
   const uint16_t x0 = LCD_X_OFFSET, x1 = LCD_X_OFFSET + LCD_W - 1;
-  const uint16_t y0 = LCD_Y_OFFSET, y1 = LCD_Y_OFFSET + LCD_H - 1;
+  const uint16_t y0 = LCD_Y_OFFSET_NORMAL, y1 = LCD_Y_OFFSET_NORMAL + LCD_H - 1;
   const uint8_t caset[4] = {(uint8_t)(x0 >> 8), (uint8_t)x0, (uint8_t)(x1 >> 8), (uint8_t)x1};
   const uint8_t raset[4] = {(uint8_t)(y0 >> 8), (uint8_t)y0, (uint8_t)(y1 >> 8), (uint8_t)y1};
   lcdCommand(0x2A, caset, 4);
@@ -333,16 +347,40 @@ static void chip(int16_t x, int16_t y, const char *label, uint16_t colour) {
 
 static int16_t chipWidth(const char *label) { return (int16_t)(strlen(label) * 6 + 8 + 4); }
 
-/* BOOT button (BOOTSEL) cycles the pages. Polled at most every 80 ms. */
-static bool pageButtonPressed(unsigned long now) {
+static void lcdFlip(void) {
+  lcd_flipped = !lcd_flipped;
+}
+
+/* BOOT button: short press = next page, long press (>=1 s) = flip screen. */
+#define BOOT_LONG_PRESS_MS 1000
+static unsigned long boot_press_start = 0;
+static bool boot_long_handled = false;
+
+enum { BTN_NONE = 0, BTN_SHORT = 1, BTN_LONG = 2 };
+
+static uint8_t bootButtonAction(unsigned long now) {
   if (now - boot_poll_ms < 80) {
-    return false;
+    return BTN_NONE;
   }
   boot_poll_ms = now;
   const bool down = BOOTSEL;
-  const bool edge = down && !boot_was_down;
+
+  if (down && !boot_was_down) {
+    boot_press_start = now;
+    boot_long_handled = false;
+  } else if (down && boot_was_down && !boot_long_handled) {
+    if (now - boot_press_start >= BOOT_LONG_PRESS_MS) {
+      boot_long_handled = true;
+      boot_was_down = down;
+      return BTN_LONG;
+    }
+  } else if (!down && boot_was_down) {
+    boot_was_down = false;
+    return boot_long_handled ? BTN_NONE : BTN_SHORT;
+  }
+
   boot_was_down = down;
-  return edge;
+  return BTN_NONE;
 }
 
 static void pageScoreboard(unsigned long now) {
@@ -480,8 +518,12 @@ void lcdStatusWorker(void) {
   if (m.payloadArmed) milestone(MS_ARMED);
 
   bool force = false;
-  if (pageButtonPressed(now)) {
+  const uint8_t btn = bootButtonAction(now);
+  if (btn == BTN_SHORT) {
     page = (uint8_t)((page + 1) % LCD_PAGES);
+    force = true;
+  } else if (btn == BTN_LONG) {
+    lcdFlip();
     force = true;
   }
   if (!force && now - last_draw_ms < 500) {
