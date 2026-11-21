@@ -108,3 +108,25 @@ Detailed system information.
 - **ENV**: environment sensor readings (temperature, pressure; shows `vacuum` when pressure < 1 hPa)
 - **VERSION**: firmware version (`FW_VERSION` in `version.h`) + build number (git commit count) + git short hash (`+` appended if the working tree had local changes)
 - **BUILT**: build date and time (all filled in automatically by `tools/gen_version.py`)
+
+## License
+
+This project is licensed under the **GNU General Public License v2.0 or later**
+(GPL-2.0-or-later). See [LICENSE](LICENSE) for the full text.
+
+### Original work
+
+The firmware is derived from
+[Pwnsat/FlatSat](https://github.com/cromulencellc/hackasat-final-2020)
+by **astrobyte** (Cromulence / Hack-A-Sat), originally released under
+GPL-2.0-or-later.
+
+### Changes in this repository
+
+- Radio hardware compiled out (`FLATSAT_NO_RADIO`); SX1262 modules held in
+  hardware reset
+- LCD status screen for the Waveshare RP2350-GEEK (`FLATSAT_LCD_GEEK`):
+  status page, attack scoreboard, system info, 180-degree flip
+- Simulated sensors and ISS-like orbit model (`FLATSAT_SIM_SENSORS`)
+- RP2350 / Pico 2 build environments
+- Build-time version injection (`tools/gen_version.py`)
