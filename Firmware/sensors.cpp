@@ -58,6 +58,10 @@ static float simWave(float period_s) {
   const float t = (float)(millis() % 3600000UL) / 1000.0f;
   return sinf(2.0f * (float)M_PI * fmodf(t, period_s) / period_s);
 }
+/* Orbit time shared by the GPS and the thermal model. */
+static double simOrbitTime(void) {
+  return (double)millis() / 1000.0 * FLATSAT_SIM_ORBIT_SPEEDUP;
+}
 bool sensorsSimulated(void) { return true; }
 #else
 bool sensorsSimulated(void) { return false; }
@@ -361,10 +365,14 @@ void sensorsConfigure(void) {
 
 bool accelerometerRead(float *x, float *y, float *z, float *temp) {
 #if FLATSAT_SIM_SENSORS
-  *x = 6.0f * simWave(7.0f);
-  *y = 5.0f * simWave(11.0f);
-  *z = 1000.0f + 3.0f * simWave(5.0f);
-  *temp = 27.5f + 0.8f * simWave(180.0f);
+  /* Micro-gravity: free fall, so ~0 g (units: mg) plus a few mg of
+   * vibration (reaction wheels, thermal creak). The board lags the skin. */
+  double skin;
+  orbitThermal(simOrbitTime() - 400.0, &skin);
+  *x = 0.8f * simWave(7.0f);
+  *y = 0.6f * simWave(11.0f);
+  *z = 0.5f * simWave(5.0f);
+  *temp = (float)skin + 3.0f + 0.3f * simWave(180.0f);
   return true;
 #endif
   *x = accel.getX();
@@ -376,10 +384,15 @@ bool accelerometerRead(float *x, float *y, float *z, float *temp) {
 
 bool bmeRead(float *t, float *p, float *alt, float *hum) {
 #if FLATSAT_SIM_SENSORS
-  *t = 22.5f + 1.5f * simWave(240.0f);
-  *p = 1013.2f + 1.0f * simWave(600.0f);
-  *alt = 44330.0f * (1.0f - powf(*p / SEALEVELPRESSURE_HPA, 0.1903f));
-  *hum = 45.0f + 5.0f * simWave(150.0f);
+  /* Space: skin temperature follows the sunlight/eclipse cycle, essentially
+   * no air (~0 hPa), no humidity. Altitude from pressure is meaningless in
+   * vacuum, and the telemetry field is 16-bit /100, so report 0. */
+  double skin;
+  orbitThermal(simOrbitTime(), &skin);
+  *t = (float)skin + 0.2f * simWave(97.0f);
+  *p = 0.0f;
+  *alt = 0.0f;
+  *hum = 0.0f;
   return true;
 #endif
   *t = bme.readTemperature();

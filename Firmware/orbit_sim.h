@@ -66,4 +66,52 @@ static inline void orbitState(double t_s, orbit_state_t *out) {
   out->alt_m = FLATSAT_SIM_ORBIT_ALT_KM * 1000.0;
 }
 
+/* ---- Thermal model: sunlight / eclipse cycle -------------------------------
+ * The orbit starts just after leaving Earth's shadow. About 63 % of each orbit
+ * is sunlit and 37 % is eclipse (circular orbit, simplified geometry). The
+ * skin temperature is a first-order lag towards a hot (sun) or cold (shadow)
+ * equilibrium; the start value is the periodic steady state, so there is no
+ * warm-up transient. Defaults give roughly -28 .. +65 C, inside the BME280's
+ * -40 .. +85 C range.
+ */
+#ifndef FLATSAT_SIM_T_HOT_C
+#define FLATSAT_SIM_T_HOT_C 75.0
+#endif
+#ifndef FLATSAT_SIM_T_COLD_C
+#define FLATSAT_SIM_T_COLD_C (-60.0)
+#endif
+#ifndef FLATSAT_SIM_T_TAU_S
+#define FLATSAT_SIM_T_TAU_S 1500.0
+#endif
+#ifndef FLATSAT_SIM_ECLIPSE_FRACTION
+#define FLATSAT_SIM_ECLIPSE_FRACTION 0.37
+#endif
+
+static inline double orbitPeriodS(void) {
+  const double kPi = 3.14159265358979323846;
+  const double kMu = 398600.4418; /* km^3/s^2 */
+  const double a = 6371.0 + FLATSAT_SIM_ORBIT_ALT_KM;
+  return 2.0 * kPi * sqrt(a * a * a / kMu);
+}
+
+/* Returns true while in Earth's shadow; *temp_c is the skin temperature. */
+static inline bool orbitThermal(double t_s, double *temp_c) {
+  const double T = orbitPeriodS();
+  const double de = T * FLATSAT_SIM_ECLIPSE_FRACTION;
+  const double ds = T - de;
+  const double th = FLATSAT_SIM_T_HOT_C, tc = FLATSAT_SIM_T_COLD_C;
+  const double a = exp(-ds / FLATSAT_SIM_T_TAU_S);
+  const double b = exp(-de / FLATSAT_SIM_T_TAU_S);
+  const double t0 = (tc * (1.0 - b) + th * b * (1.0 - a)) / (1.0 - a * b);
+  double ph = fmod(t_s, T);
+  if (ph < 0) ph += T;
+  if (ph < ds) {
+    *temp_c = th + (t0 - th) * exp(-ph / FLATSAT_SIM_T_TAU_S);
+    return false;
+  }
+  const double ts = th + (t0 - th) * a;
+  *temp_c = tc + (ts - tc) * exp(-(ph - ds) / FLATSAT_SIM_T_TAU_S);
+  return true;
+}
+
 #endif // FIRMWARE_ORBIT_SIM_H

@@ -389,7 +389,11 @@ void lcdStatusWorker(void) {
     float t, p, alt, h;
     if (bmeRead(&t, &p, &alt, &h)) {
       canvas->setCursor(96, row_low);
-      canvas->printf("%.1fC %.0fhPa", t, p);
+      if (p < 1.0f) {
+        canvas->printf("%.1fC  vacuum", t);
+      } else {
+        canvas->printf("%.1fC %.0fhPa", t, p);
+      }
     }
   }
 
