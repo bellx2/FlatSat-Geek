@@ -3,7 +3,7 @@
 Pwnsat/FlatSat firmware, adapted for the Waveshare RP2350-GEEK: no radio hardware,
 and a status screen on the 1.14" LCD.
 
-Based on [Pwnsat/FlatSat](https://github.com/cromulencellc/hackasat-final-2020)
+Based on [Pwnsat/FlatSat](https://github.com/Pwnsat/FlatSat)
 (GPL-2.0-or-later). See [License](#license) for attribution and a list of
 changes.
 
@@ -113,7 +113,7 @@ This project is licensed under the **GNU General Public License v2.0 or later**
 ### Original work
 
 The firmware is derived from
-[Pwnsat/FlatSat](https://github.com/cromulencellc/hackasat-final-2020)
+[Pwnsat/FlatSat](https://github.com/Pwnsat/FlatSat)
 by **astrobyte** (Cromulence / Hack-A-Sat), originally released under
 GPL-2.0-or-later.
 
