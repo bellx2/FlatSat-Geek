@@ -46,6 +46,23 @@ Simulated environment (space-like):
 - Tunables: `FLATSAT_SIM_T_HOT_C`, `FLATSAT_SIM_T_COLD_C`,
   `FLATSAT_SIM_T_TAU_S`, `FLATSAT_SIM_ECLIPSE_FRACTION`.
 
+## Attack exercises
+
+Compatibility with the
+[original attack scripts](https://github.com/Pwnsat/FlatSat/tree/main/Attacks)
+on the RP2350-GEEK (USB only, no radio):
+
+| # | Attack | USB | Notes |
+|---|---|---|---|
+| 00 | APID Enumeration | Yes | |
+| 01 | Eavesdropping | Yes | Capture telemetry from USB instead of RF |
+| 02 | Fuzzing / Crash | Partial | Command accepted but transmission blocked (`RADIO DISABLED`) |
+| 03 | Command Injection | Yes | |
+| 04 | GPS Spoofing | No | Requires SDR + GPS hardware |
+| 05 | GS Auth Spoofing | Conditional | Needs GPS within ground-station range; use `pico2_geek_sim` with `GPS_MODE=1` |
+| 06 | Replay | Yes | |
+| 07 | RESETC | Yes | |
+
 ## Screen pages
 
 The BOOT button on the RP2350-GEEK controls the screen:
