@@ -231,7 +231,7 @@ void lcdStatusBoot(const char *message) {
   canvas->print("FLATSAT");
   canvas->setTextSize(1);
   canvas->setCursor(6 + 7 * 12, 11);
-  canvas->print("-Geek");
+  canvas->print(" - Geek");
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, 32);
   canvas->print("vulnerable-by-design trainer");
@@ -503,7 +503,7 @@ void lcdStatusWorker(void) {
   canvas->print("FLATSAT");
   canvas->setTextSize(1);
   canvas->setCursor(6 + 7 * 12, 10); /* smaller suffix, same baseline */
-  canvas->print("-Geek");
+  canvas->print(" - Geek");
   const unsigned long s = now / 1000;
   canvas->setTextSize(1);
   canvas->setCursor(LCD_W - 6 * 8 - 6, 6);
