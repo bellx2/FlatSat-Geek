@@ -22,7 +22,11 @@ void radioHoldInReset(void);
 
 /* What the version reply tells the ground, so the state is readable from the
  * console instead of taken on trust. */
+#if FLATSAT_LCD_GEEK
+#define FLATSAT_RADIO_STATE_STR "disabled (no radio hardware, GEEK build)"
+#else
 #define FLATSAT_RADIO_STATE_STR "disabled (held in reset, course build)"
+#endif
 
 #else
 #define FLATSAT_RADIO_STATE_STR "enabled"

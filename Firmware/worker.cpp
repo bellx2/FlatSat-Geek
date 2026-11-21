@@ -7,6 +7,7 @@
  */
 
 #include "hardware/watchdog.h"
+#include "lcd_status.h"
 #include "led.h"
 #include "mission.h"
 #include "rdownlink.h"
@@ -575,6 +576,7 @@ static void debugPrintTelemetryPacket(space_packet_t *space_packet,
 
 static void transmitPacketRadioUSB(uint8_t *buffer, ssize_t buffer_len) {
   obcUSBTransmitFrame(buffer, buffer_len);
+  lcdStatusNoteTx();
 #if !FLATSAT_NO_RADIO
   downlinkRadioTransmitNBlock(buffer, buffer_len);
 #endif
@@ -582,6 +584,7 @@ static void transmitPacketRadioUSB(uint8_t *buffer, ssize_t buffer_len) {
 
 static bool transmitPacketRadioUSBBlock(uint8_t *buffer, ssize_t buffer_len) {
   obcUSBTransmitFrame(buffer, buffer_len);
+  lcdStatusNoteTx();
 #if FLATSAT_NO_RADIO
   /* USB carried it. Nothing left to do, and the caller's contract is "did the
    * frame go out", which it did. */
@@ -1491,6 +1494,7 @@ void telemetryRadioWorker(void) {
 
 void commandApidHandler(space_packet_t *space_packet, command_source_t source) {
   uint16_t apid = space_packet->header.identification & 0x7FF;
+  lcdStatusNoteCommand(apid, (uint8_t)source);
   if (apid == SPP_APID_TC_PING) {
     // Pilot APID for the secondary-header format: same command, same
     // effect either way -- the SecHdr bit (already reconstructed in host
@@ -1723,3 +1727,13 @@ void commandHandlerRadio(uint8_t *buffer, uint16_t buffer_len) {
 void commandHandlerUSB(uint8_t *buffer, uint16_t buffer_len) {
   commandHandlerInternal(buffer, buffer_len, COMMAND_SOURCE_USB);
 }
+
+#if FLATSAT_LCD_GEEK
+void lcdMissionSnapshot(lcd_mission_t *snapshot) {
+  snapshot->mode = mission_ctx.mode;
+  snapshot->payloadArmed = mission_ctx.payloadArmed;
+  snapshot->usbDebug = mission_ctx.usbDebugEnabled;
+  snapshot->gsModeEnabled = mission_ctx.groundStationModeEnabled;
+  snapshot->gsSession = mission_ctx.groundStationSessionActive;
+}
+#endif

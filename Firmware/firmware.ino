@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
  */
+#include "lcd_status.h"
 #include "led.h"
 #include "radio_off.h"
 #include "rdownlink.h"
@@ -26,9 +27,12 @@ void setup() {
   /* First thing, before anything can touch the SPI bus. */
   radioHoldInReset();
 #endif
+  lcdStatusBegin();
+  lcdStatusBoot("WAIT USB CONSOLE");
   obcSetupUSB();
   ledConfigure();
   obcConfigureCore0();
+  lcdStatusBoot("SENSORS INIT");
   sensorsConfigure();
 #if !FLATSAT_NO_RADIO
   uplinkRadioConfigure();
@@ -37,6 +41,7 @@ void setup() {
 #endif
   obcUSBPacketRecivedCallback(commandHandlerUSB);
   Serial.printf("[INFO] Radio: %s\r\n", FLATSAT_RADIO_STATE_STR);
+  lcdStatusBoot("READY");
   ledTurnWhite();
   delay(500);
   ledTurnOff();
@@ -57,6 +62,7 @@ void loop() {
     telemetryDashboardWorker();
   }
   consoleWorker();
+  lcdStatusWorker();
 }
 
 void loop1() { obcUSBRecv(); }
