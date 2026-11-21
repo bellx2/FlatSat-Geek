@@ -21,6 +21,7 @@
 #include "mission.h"
 #include "sensors.h"
 #include <Adafruit_GFX.h>
+#include <Fonts/TomThumb.h>
 #include <math.h>
 #include <Adafruit_TinyUSB.h>
 #include "hardware/gpio.h"
@@ -352,10 +353,10 @@ static void pageScoreboard(unsigned long now) {
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, 26);
   canvas->print("ATTACK SCOREBOARD");
-  canvas->setTextSize(2);
+  canvas->setTextSize(1);
   canvas->setTextColor(score ? C_HIT : C_DIM);
-  canvas->setCursor(190, 23);
-  canvas->printf("%d/%d", score, MS_COUNT);
+  canvas->setCursor(174, 26);
+  canvas->printf("SCORE %d/%d", score, MS_COUNT);
 
   for (int i = 0; i < MS_COUNT; i++) {
     const int col = i / 4;
@@ -375,12 +376,15 @@ static void pageScoreboard(unsigned long now) {
     canvas->print(ms_names[i]);
   }
 
+  /* Footer in a tiny font (TomThumb, 4 px advance; cursor y is the baseline). */
+  canvas->setFont(&TomThumb);
   canvas->setTextColor(C_DIM);
-  canvas->setCursor(6, 116);
+  canvas->setCursor(6, 122);
   canvas->printf("CMDS %lu  USB %lu  RF %lu", (unsigned long)cmd_count,
                  (unsigned long)usb_cmds, (unsigned long)rf_cmds);
-  canvas->setCursor(6, 126);
-  canvas->print("GS AUTH / DEBUG / ARMED = real state");
+  canvas->setCursor(6, 131);
+  canvas->print("GS AUTH / DEBUG ON / ARMED = real state");
+  canvas->setFont();
 }
 
 static void pageSystem(unsigned long now, uint8_t sflags) {
