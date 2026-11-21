@@ -22,3 +22,34 @@ Build (needs PlatformIO):
 
 Prebuilt: `Firmware/build/flatsat-firmware-rp2350-geek.uf2`. Hold BOOTSEL while
 plugging in USB, copy the .uf2 onto the drive. Not yet verified on hardware.
+
+## Simulated sensors (`pico2_geek_sim`)
+
+For a board with no sensors attached: BME280, LIS2DH12 and GPS values are
+simulated (`-DFLATSAT_SIM_SENSORS=1`). A real GPS that sends NMEA always wins.
+The screen shows a `SIM` chip, and the boot log prints `[INFO] SIM: ...`.
+
+    pio run -e pico2_geek_sim
+    # prebuilt: Firmware/build/flatsat-firmware-rp2350-geek-sim.uf2
+
+Simulated GPS (`-DFLATSAT_SIM_GPS_MODE=n`):
+
+- `0` (default): a satellite on an ISS-like circular orbit (420 km, 51.6 deg,
+  period ~92.8 min), see `orbit_sim.h`. Starts over Tokyo heading north-east.
+  `-DFLATSAT_SIM_ORBIT_SPEEDUP=60` runs it 60x faster. The ground-station
+  gate (35 km) opens only for a few seconds when the track passes over Las
+  Vegas (first time about 21 min after boot, about 3 s).
+- `1`: small fixed track over the ground station, gate stays open.
+- `2`: small fixed track over Tokyo, gate stays closed.
+
+Simulated environment (space-like):
+
+- Temperature follows the orbit's sunlight/eclipse cycle: about -28 C coming
+  out of shadow, about +65 C at the end of the sunlit arc, 37% of each orbit in
+  eclipse. It speeds up with `-DFLATSAT_SIM_ORBIT_SPEEDUP`.
+- Pressure and humidity read 0 (vacuum); altitude from the BME280 is reported
+  as 0 because pressure altitude is meaningless in vacuum.
+- The accelerometer reads micro-g (free fall): well under 1 mg of noise on
+  each axis. Its temperature tracks the skin temperature with a lag.
+- Tunables: `FLATSAT_SIM_T_HOT_C`, `FLATSAT_SIM_T_COLD_C`,
+  `FLATSAT_SIM_T_TAU_S`, `FLATSAT_SIM_ECLIPSE_FRACTION`.
