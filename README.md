@@ -129,3 +129,9 @@ GPL-2.0-or-later.
 - `platformio.ini`: RP2350 / Pico 2 build environments
   (`pico2_tinyusb_norf`, `pico2_geek_norf`, `pico2_geek_sim`)
 - `version.h`, `tools/gen_version.py`: build-time version injection
+
+All modifications to existing files are wrapped in `#if FLATSAT_NO_RADIO`,
+`#if FLATSAT_LCD_GEEK` or `#if FLATSAT_SIM_SENSORS` guards. To see the full
+diff from the upstream import:
+
+    git diff cecef5f..HEAD -- Firmware/
