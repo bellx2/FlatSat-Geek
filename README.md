@@ -1,5 +1,7 @@
 # FlatSat-Geek
 
+[Japanese / 日本語](README_ja.md)
+
 Pwnsat/FlatSat firmware, adapted for the Waveshare RP2350-GEEK: no radio hardware,
 and a status screen on the 1.14" LCD.
 
