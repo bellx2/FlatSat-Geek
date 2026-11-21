@@ -3,17 +3,9 @@
 Pwnsat/FlatSat firmware, adapted for the Waveshare RP2350-GEEK: no radio hardware,
 and a status screen on the 1.14" LCD.
 
-Based on `Pwnsat/FlatSat` `Firmware/` (GPL-2.0-or-later). Changes against it:
-
-- `radio_off.h/.cpp` and `#if FLATSAT_NO_RADIO` in `firmware.ino` / `worker.cpp`:
-  every call that would drive the SX1262 radios is compiled out
-  (the "course no-radio" patch; one hunk was re-applied by hand).
-- `lcd_status.h/.cpp`, `#if FLATSAT_LCD_GEEK`: status screen. Mission mode, USB
-  console/link, sensors, GPS, last command, TM count. Drives the LCD directly
-  over SPI1 (DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25; pins taken from
-  the RP2350-GEEK schematic, not yet confirmed on hardware).
-- `platformio.ini`: envs `pico2_tinyusb_norf` (Pico 2, no radio) and
-  `pico2_geek_norf` (RP2350-GEEK, no radio + LCD).
+Based on [Pwnsat/FlatSat](https://github.com/cromulencellc/hackasat-final-2020)
+(GPL-2.0-or-later). See [License](#license) for attribution and a list of
+changes.
 
 Build (needs PlatformIO):
 
@@ -21,7 +13,7 @@ Build (needs PlatformIO):
     pio run -e pico2_geek_norf        # -> .pio/build/pico2_geek_norf/firmware.uf2
 
 Prebuilt: `Firmware/build/flatsat-firmware-rp2350-geek.uf2`. Hold BOOTSEL while
-plugging in USB, copy the .uf2 onto the drive. Not yet verified on hardware.
+plugging in USB, copy the .uf2 onto the drive.
 
 ## Simulated sensors (`pico2_geek_sim`)
 
@@ -56,9 +48,13 @@ Simulated environment (space-like):
 
 ## Screen pages
 
-Press the BOOT button on the RP2350-GEEK to switch pages. The current page
-number is shown at the top right (e.g. `2/3`). The screen redraws at most
-twice a second.
+The BOOT button on the RP2350-GEEK controls the screen:
+
+- **Short press**: switch to the next page (page number shown at the top, e.g. `2/3`)
+- **Long press (1 s)**: flip the display 180 degrees (useful when the board is mounted upside down)
+
+The screen redraws at most twice a second. The flip also works during the
+boot screen (`WAIT USB CONSOLE`).
 
 ### 1. Status
 
@@ -123,10 +119,13 @@ GPL-2.0-or-later.
 
 ### Changes in this repository
 
-- Radio hardware compiled out (`FLATSAT_NO_RADIO`); SX1262 modules held in
-  hardware reset
-- LCD status screen for the Waveshare RP2350-GEEK (`FLATSAT_LCD_GEEK`):
-  status page, attack scoreboard, system info, 180-degree flip
-- Simulated sensors and ISS-like orbit model (`FLATSAT_SIM_SENSORS`)
-- RP2350 / Pico 2 build environments
-- Build-time version injection (`tools/gen_version.py`)
+- `radio_off.h/.cpp`, `#if FLATSAT_NO_RADIO`: SX1262 radios compiled out and
+  held in hardware reset
+- `lcd_status.h/.cpp`, `#if FLATSAT_LCD_GEEK`: 1.14" LCD status screen
+  (status page, attack scoreboard, system info, 180-degree flip via MADCTL).
+  SPI1 pins: DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25
+- `orbit_sim.h`, `sensors.cpp` with `FLATSAT_SIM_SENSORS`: simulated BME280,
+  LIS2DH12 and GPS (ISS-like orbit with thermal model)
+- `platformio.ini`: RP2350 / Pico 2 build environments
+  (`pico2_tinyusb_norf`, `pico2_geek_norf`, `pico2_geek_sim`)
+- `version.h`, `tools/gen_version.py`: build-time version injection
