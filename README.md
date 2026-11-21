@@ -12,8 +12,9 @@ Build (needs PlatformIO):
     cd Firmware
     pio run -e pico2_geek_norf        # -> .pio/build/pico2_geek_norf/firmware.uf2
 
-Prebuilt: `Firmware/build/flatsat-firmware-rp2350-geek.uf2`. Hold BOOTSEL while
-plugging in USB, copy the .uf2 onto the drive.
+Flash: hold BOOTSEL while plugging in USB, copy the `.uf2` onto the drive.
+Prebuilt UF2s are attached to each
+[GitHub release](https://github.com/bellx2/FlatSat-Geek/releases).
 
 ## Simulated sensors (`pico2_geek_sim`)
 
@@ -22,7 +23,6 @@ simulated (`-DFLATSAT_SIM_SENSORS=1`). A real GPS that sends NMEA always wins.
 The screen shows a `SIM` chip, and the boot log prints `[INFO] SIM: ...`.
 
     pio run -e pico2_geek_sim
-    # prebuilt: Firmware/build/flatsat-firmware-rp2350-geek-sim.uf2
 
 Simulated GPS (`-DFLATSAT_SIM_GPS_MODE=n`):
 
