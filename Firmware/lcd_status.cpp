@@ -43,6 +43,10 @@
 /* 135x240 ST7789 panel inside a 240x320 controller RAM; landscape offsets. */
 #define LCD_X_OFFSET 40
 #define LCD_Y_OFFSET_NORMAL 53
+#define LCD_Y_OFFSET_FLIPPED 52
+#define LCD_MADCTL_NORMAL 0x70
+#define LCD_MADCTL_FLIPPED 0xB0
+static uint16_t lcd_y_offset = LCD_Y_OFFSET_NORMAL;
 static bool lcd_flipped = false;
 
 #define RGB(r, g, b) ((uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3)))
@@ -70,11 +74,14 @@ static unsigned long last_draw_ms = 0;
 static uint32_t usb_cmds = 0;
 static uint32_t rf_cmds = 0;
 
-/* Pages, switched with the BOOT button. */
+/* Pages and button state. Short press = next page, long press = flip. */
 #define LCD_PAGES 3
+#define BOOT_LONG_PRESS_MS 1000
 static uint8_t page = 0;
 static bool boot_was_down = false;
 static unsigned long boot_poll_ms = 0;
+static unsigned long boot_press_start = 0;
+static bool boot_long_handled = false;
 
 /* Reset reason, captured once at start-up. */
 static const char *reset_reason = "unknown";
@@ -138,22 +145,15 @@ static void lcdCommand(uint8_t cmd, const uint8_t *data, size_t len) {
 
 static void lcdCommand1(uint8_t cmd, uint8_t value) { lcdCommand(cmd, &value, 1); }
 
-static void lcdFlipBuffer(void) {
-  uint16_t *buf = canvas->getBuffer();
-  const int n = LCD_W * LCD_H;
-  for (int i = 0, j = n - 1; i < j; i++, j--) {
-    uint16_t tmp = buf[i];
-    buf[i] = buf[j];
-    buf[j] = tmp;
-  }
+static void lcdFlip(void) {
+  lcd_flipped = !lcd_flipped;
+  lcd_y_offset = lcd_flipped ? LCD_Y_OFFSET_FLIPPED : LCD_Y_OFFSET_NORMAL;
+  lcdCommand1(0x36, lcd_flipped ? LCD_MADCTL_FLIPPED : LCD_MADCTL_NORMAL);
 }
 
 static void lcdPush(void) {
-  if (lcd_flipped) {
-    lcdFlipBuffer();
-  }
   const uint16_t x0 = LCD_X_OFFSET, x1 = LCD_X_OFFSET + LCD_W - 1;
-  const uint16_t y0 = LCD_Y_OFFSET_NORMAL, y1 = LCD_Y_OFFSET_NORMAL + LCD_H - 1;
+  const uint16_t y0 = lcd_y_offset, y1 = lcd_y_offset + LCD_H - 1;
   const uint8_t caset[4] = {(uint8_t)(x0 >> 8), (uint8_t)x0, (uint8_t)(x1 >> 8), (uint8_t)x1};
   const uint8_t raset[4] = {(uint8_t)(y0 >> 8), (uint8_t)y0, (uint8_t)(y1 >> 8), (uint8_t)y1};
   lcdCommand(0x2A, caset, 4);
@@ -233,10 +233,35 @@ void lcdStatusBegin(void) {
   lcd_ready = true;
 }
 
+/* Poll the BOOT button during the boot screen (before the main worker loop
+ * and its bootButtonAction() are running). Called in a tight loop so it does
+ * its own timing. Only long-press (flip) is handled here. */
+static void lcdBootPollButton(void) {
+  const unsigned long now = millis();
+  if (now - boot_poll_ms < 80) {
+    return;
+  }
+  boot_poll_ms = now;
+  const bool down = BOOTSEL;
+  if (down && !boot_was_down) {
+    boot_press_start = now;
+    boot_long_handled = false;
+  } else if (down && boot_was_down && !boot_long_handled) {
+    if (now - boot_press_start >= BOOT_LONG_PRESS_MS) {
+      boot_long_handled = true;
+      lcdFlip();
+    }
+  } else if (!down && boot_was_down) {
+    boot_long_handled = false;
+  }
+  boot_was_down = down;
+}
+
 void lcdStatusBoot(const char *message) {
   if (!lcd_ready) {
     return;
   }
+  lcdBootPollButton();
   canvas->fillScreen(C_BG);
   canvas->fillRect(0, 0, LCD_W, 22, C_BAR);
   canvas->setTextColor(C_TEXT);
@@ -346,15 +371,6 @@ static void chip(int16_t x, int16_t y, const char *label, uint16_t colour) {
 }
 
 static int16_t chipWidth(const char *label) { return (int16_t)(strlen(label) * 6 + 8 + 4); }
-
-static void lcdFlip(void) {
-  lcd_flipped = !lcd_flipped;
-}
-
-/* BOOT button: short press = next page, long press (>=1 s) = flip screen. */
-#define BOOT_LONG_PRESS_MS 1000
-static unsigned long boot_press_start = 0;
-static bool boot_long_handled = false;
 
 enum { BTN_NONE = 0, BTN_SHORT = 1, BTN_LONG = 2 };
 
