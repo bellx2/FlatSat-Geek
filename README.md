@@ -65,5 +65,8 @@ shown at the top, e.g. `2/3`):
    milestones tick when the command is received; GS AUTH, DEBUG ON and ARMED tick
    when the satellite is really in that state. A newly reached milestone is
    highlighted for 3 s. Counters reset on reboot.
-3. **System**: reset reason (power-on / watchdog or soft reset via RESETC /
+3. **System**: firmware version (`FW_VERSION` in `version.h`, plus the git commit
+   count as the build number, the git hash with `+` if the tree had local changes,
+   and the build date/time, all filled in automatically by `tools/gen_version.py`),
+   reset reason (power-on / watchdog or soft reset via RESETC /
    brown-out / RUN pin), uptime, free heap, TM and command counts, environment.

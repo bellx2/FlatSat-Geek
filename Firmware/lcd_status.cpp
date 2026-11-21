@@ -20,6 +20,7 @@
 
 #include "mission.h"
 #include "sensors.h"
+#include "version.h"
 #include <Adafruit_GFX.h>
 #include <Fonts/TomThumb.h>
 #include <math.h>
@@ -393,14 +394,14 @@ static void pageSystem(unsigned long now, uint8_t sflags) {
   canvas->setCursor(6, 26);
   canvas->print("SYSTEM");
 
-  int16_t y = 40;
+  int16_t y = 36;
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, y);
   canvas->print("RESET");
   canvas->setTextColor(C_TEXT);
   canvas->setCursor(60, y);
   canvas->print(reset_reason);
-  y += 14;
+  y += 13;
 
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, y);
@@ -409,7 +410,7 @@ static void pageSystem(unsigned long now, uint8_t sflags) {
   canvas->setCursor(60, y);
   const unsigned long s = now / 1000;
   canvas->printf("%lud %02lu:%02lu:%02lu", s / 86400, (s / 3600) % 24, (s / 60) % 60, s % 60);
-  y += 14;
+  y += 13;
 
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, y);
@@ -417,7 +418,7 @@ static void pageSystem(unsigned long now, uint8_t sflags) {
   canvas->setTextColor(C_TEXT);
   canvas->setCursor(60, y);
   canvas->printf("%lu B free", (unsigned long)rp2040.getFreeHeap());
-  y += 14;
+  y += 13;
 
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, y);
@@ -425,7 +426,7 @@ static void pageSystem(unsigned long now, uint8_t sflags) {
   canvas->setTextColor(C_TEXT);
   canvas->setCursor(60, y);
   canvas->printf("%lu sent / %lu rcvd", (unsigned long)tx_count, (unsigned long)cmd_count);
-  y += 14;
+  y += 13;
 
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, y);
@@ -442,7 +443,23 @@ static void pageSystem(unsigned long now, uint8_t sflags) {
   } else {
     canvas->print("no BME280");
   }
-  y += 14;
+  y += 13;
+
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, y);
+  canvas->print("VERSION");
+  canvas->setTextColor(C_TEXT);
+  canvas->setCursor(60, y);
+  canvas->printf("%s  build %d  %s", FW_VERSION, (int)FW_BUILD_NUMBER, FW_BUILD_HASH);
+  y += 13;
+
+  canvas->setTextColor(C_DIM);
+  canvas->setCursor(6, y);
+  canvas->print("BUILT");
+  canvas->setTextColor(C_TEXT);
+  canvas->setCursor(60, y);
+  canvas->print(FW_BUILD_DATE);
+  y += 13;
 
   canvas->setTextColor(C_DIM);
   canvas->setCursor(6, 126);
