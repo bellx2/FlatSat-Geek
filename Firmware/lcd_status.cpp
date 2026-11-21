@@ -340,6 +340,10 @@ void lcdStatusWorker(void) {
   }
   chip(x, row_sens, gps_txt, gps_col);
   x += chipWidth(gps_txt);
+  if (sensorsSimulated()) {
+    chip(x, row_sens, "SIM", C_WARN);
+    x += chipWidth("SIM");
+  }
   if (m.gsSession) {
     chip(x, row_sens, "GS AUTH", C_OK);
   } else if (m.gsModeEnabled) {

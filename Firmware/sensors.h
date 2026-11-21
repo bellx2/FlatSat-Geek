@@ -41,4 +41,6 @@ void gpsPoll(void);
 bool gpsRead(gps_nav_t *nav);
 uint8_t gpsStatusByte(const gps_nav_t *nav);
 uint8_t sensorsStatusFlags(void);
+/* true when BME280/LIS2DH12 (and GPS, if no real NMEA arrives) are simulated. */
+bool sensorsSimulated(void);
 #endif // FIRMWARE_SENSORS_H

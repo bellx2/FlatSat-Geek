@@ -35,6 +35,26 @@ typedef struct {
 
 static sensor_context_t s_context;
 
+#if FLATSAT_SIM_SENSORS
+#include <math.h>
+/* Simulated sensors (build flag -DFLATSAT_SIM_SENSORS=1): smooth, slowly
+ * varying values so the board can be demonstrated without any sensor wired.
+ * GPS: a ~2 km circular track. By default it is nowhere near the ground
+ * station (so the GS access gate stays closed and the GPS-spoofing scenarios
+ * still mean something); -DFLATSAT_SIM_GPS_INSIDE_GATE=1 puts it inside the
+ * gate. A real GPS that delivers NMEA always takes priority. */
+#ifndef FLATSAT_SIM_GPS_INSIDE_GATE
+#define FLATSAT_SIM_GPS_INSIDE_GATE 0
+#endif
+static float simWave(float period_s) {
+  const float t = (float)(millis() % 3600000UL) / 1000.0f;
+  return sinf(2.0f * (float)M_PI * fmodf(t, period_s) / period_s);
+}
+bool sensorsSimulated(void) { return true; }
+#else
+bool sensorsSimulated(void) { return false; }
+#endif
+
 static void gpsClearFix(void) {
   s_context.gps.hasFix = false;
   s_context.gps.latitudeE7 = 0;
@@ -312,6 +332,13 @@ static void sensorsInitGps(void) {
 }
 
 void sensorsConfigure(void) {
+#if FLATSAT_SIM_SENSORS
+  s_context.bmeOk = true;
+  s_context.accOk = true;
+  Serial.print("[INFO] SIM: BME280/LIS2DH12 values are simulated, I2C not used\r\n");
+  sensorsInitGps(); /* real GPS UART stays configured; simulated fix if silent */
+  return;
+#endif
   Wire.setSDA(PIN_I2C_SDA);
   Wire.setSCL(PIN_I2C_SCL);
   Wire.begin();
@@ -325,6 +352,13 @@ void sensorsConfigure(void) {
 }
 
 bool accelerometerRead(float *x, float *y, float *z, float *temp) {
+#if FLATSAT_SIM_SENSORS
+  *x = 6.0f * simWave(7.0f);
+  *y = 5.0f * simWave(11.0f);
+  *z = 1000.0f + 3.0f * simWave(5.0f);
+  *temp = 27.5f + 0.8f * simWave(180.0f);
+  return true;
+#endif
   *x = accel.getX();
   *y = accel.getY();
   *z = accel.getZ();
@@ -333,6 +367,13 @@ bool accelerometerRead(float *x, float *y, float *z, float *temp) {
 }
 
 bool bmeRead(float *t, float *p, float *alt, float *hum) {
+#if FLATSAT_SIM_SENSORS
+  *t = 22.5f + 1.5f * simWave(240.0f);
+  *p = 1013.2f + 1.0f * simWave(600.0f);
+  *alt = 44330.0f * (1.0f - powf(*p / SEALEVELPRESSURE_HPA, 0.1903f));
+  *hum = 45.0f + 5.0f * simWave(150.0f);
+  return true;
+#endif
   *t = bme.readTemperature();
   *p = bme.readPressure() / 100.0F;
   *alt = bme.readAltitude(SEALEVELPRESSURE_HPA);
@@ -375,7 +416,11 @@ void gpsPoll(void) {
   gpsRefreshAvailability();
 }
 
+#if FLATSAT_SIM_SENSORS
+static bool gpsReadReal(gps_nav_t *nav) {
+#else
 bool gpsRead(gps_nav_t *nav) {
+#endif
   if (nav == NULL) {
     return false;
   }
@@ -419,6 +464,48 @@ bool gpsRead(gps_nav_t *nav) {
 
   return nav->uartOk;
 }
+
+#if FLATSAT_SIM_SENSORS
+bool gpsRead(gps_nav_t *nav) {
+  if (nav == NULL) {
+    return false;
+  }
+  gpsReadReal(nav);
+  if (nav->connected && nav->nmeaActive) {
+    return nav->uartOk; /* a real GPS is talking: its data wins */
+  }
+
+  const unsigned long now = millis();
+#if FLATSAT_SIM_GPS_INSIDE_GATE
+  const double base_lat = 36.1699, base_lon = -115.1398; /* = GS position in worker.cpp */
+#else
+  const double base_lat = 35.6812, base_lon = 139.7671;
+#endif
+  const double phase = 2.0 * M_PI * fmod((double)now / 1000.0, 360.0) / 360.0;
+  const double lat = base_lat + 0.018 * sin(phase);
+  const double lon = base_lon + 0.018 * cos(phase);
+  const unsigned long sec = now / 1000UL;
+
+  memset(nav, 0, sizeof(*nav));
+  nav->uartOk = true;
+  nav->connected = true;
+  nav->nmeaActive = true;
+  nav->hasFix = true;
+  nav->hasDateTime = true;
+  nav->latitudeE7 = (int32_t)(lat * 1e7);
+  nav->longitudeE7 = (int32_t)(lon * 1e7);
+  nav->altitudeCm = 4000 + (int32_t)(150.0f * simWave(90.0f));
+  nav->satellites = (uint8_t)(9 + (int)roundf(simWave(45.0f)));
+  nav->utcHour = (uint8_t)((sec / 3600UL) % 24UL);
+  nav->utcMinute = (uint8_t)((sec / 60UL) % 60UL);
+  nav->utcSecond = (uint8_t)(sec % 60UL);
+  nav->utcDay = 21;
+  nav->utcMonth = 11;
+  nav->utcYear = 2026;
+  nav->lastByteMs = nav->lastNmeaMs = nav->lastDateTimeMs = nav->lastFixMs = now;
+  return true;
+}
+#endif
 
 uint8_t gpsStatusByte(const gps_nav_t *nav) {
   uint8_t flags = 0;
