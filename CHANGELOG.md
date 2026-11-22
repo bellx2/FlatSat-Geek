@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2026-11-22
+
+### Changed
+- Ground station moved to JAXA Tsukuba (36.0604N, 140.1335E) with 100 km
+  radius for GEEK builds; non-GEEK builds keep Las Vegas
+- Simulated orbit now circles near Tsukuba: ~4 min in range / ~6 min out
+  of range per 10-min cycle, entering range ~30 s after boot
+
+### Fixed
+- `gs_station_radius_m` uint16_t overflow when set to 100 km (changed to
+  uint32_t, telemetry report capped at 65535 m)
+
 ## [1.1.1] - 2026-11-22
 
 ### Fixed
