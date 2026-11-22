@@ -136,7 +136,7 @@ RP2350-GEEK の BOOT ボタンで画面を操作:
   (ステータス、攻撃スコアボード、システム情報、MADCTL による 180 度回転)。
   SPI1 ピン: DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25
 - `orbit_sim.h`, `sensors.cpp` (`FLATSAT_SIM_SENSORS`): BME280、LIS2DH12、
-  GPS のシミュレーション (ISS 相当の軌道モデルと熱モデル)
+  GPS のシミュレーション (GEEK は筑波付近の円軌道、その他は ISS 相当の軌道; 熱モデル)
 - `platformio.ini`: RP2350 / Pico 2 ビルド環境
   (`pico2_tinyusb_norf`, `pico2_geek_norf`, `pico2_geek_sim`)
 - `version.h`, `tools/gen_version.py`: ビルド時バージョン注入

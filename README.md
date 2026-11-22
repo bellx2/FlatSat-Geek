@@ -142,7 +142,8 @@ GPL-2.0-or-later.
   (status page, attack scoreboard, system info, 180-degree flip via MADCTL).
   SPI1 pins: DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25
 - `orbit_sim.h`, `sensors.cpp` with `FLATSAT_SIM_SENSORS`: simulated BME280,
-  LIS2DH12 and GPS (ISS-like orbit with thermal model)
+  LIS2DH12 and GPS (Tsukuba circular orbit for GEEK, ISS-like orbit for
+  others; thermal model)
 - `platformio.ini`: RP2350 / Pico 2 build environments
   (`pico2_tinyusb_norf`, `pico2_geek_norf`, `pico2_geek_sim`)
 - `version.h`, `tools/gen_version.py`: build-time version injection
