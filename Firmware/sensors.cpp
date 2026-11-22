@@ -35,6 +35,38 @@ typedef struct {
 
 static sensor_context_t s_context;
 
+#if FLATSAT_GPS_OVERRIDE
+#ifndef COURSE_GPS_LAT_E7
+#define COURSE_GPS_LAT_E7 357122000L   /* 35.7122 Tokyo */
+#endif
+#ifndef COURSE_GPS_LON_E7
+#define COURSE_GPS_LON_E7 1397038000L  /* 139.7038 */
+#endif
+#ifndef COURSE_GPS_ALT_CM
+#define COURSE_GPS_ALT_CM 3500L        /* 35 m */
+#endif
+#ifndef COURSE_GPS_SATS
+#define COURSE_GPS_SATS 11
+#endif
+static bool s_gps_override_active = true;
+static gps_nav_t s_gps_override = {
+    .latitudeE7 = COURSE_GPS_LAT_E7,
+    .longitudeE7 = COURSE_GPS_LON_E7,
+    .altitudeCm = COURSE_GPS_ALT_CM,
+    .satellites = COURSE_GPS_SATS,
+};
+
+void gpsSetOverride(int32_t latE7, int32_t lonE7, int32_t altCm, uint8_t sats) {
+  s_gps_override.latitudeE7 = latE7;
+  s_gps_override.longitudeE7 = lonE7;
+  s_gps_override.altitudeCm = altCm;
+  s_gps_override.satellites = sats;
+  s_gps_override_active = true;
+}
+
+void gpsClearOverride(void) { s_gps_override_active = false; }
+#endif
+
 #if FLATSAT_SIM_SENSORS
 #include <math.h>
 /* Simulated sensors (build flag -DFLATSAT_SIM_SENSORS=1): smooth, slowly
@@ -445,6 +477,21 @@ bool gpsRead(gps_nav_t *nav) {
   if (nav == NULL) {
     return false;
   }
+#if FLATSAT_GPS_OVERRIDE && !FLATSAT_SIM_SENSORS
+  if (s_gps_override_active) {
+    memset(nav, 0, sizeof(*nav));
+    nav->uartOk = true;
+    nav->connected = true;
+    nav->nmeaActive = true;
+    nav->hasFix = true;
+    nav->latitudeE7 = s_gps_override.latitudeE7;
+    nav->longitudeE7 = s_gps_override.longitudeE7;
+    nav->altitudeCm = s_gps_override.altitudeCm;
+    nav->satellites = s_gps_override.satellites;
+    nav->lastFixMs = millis();
+    return true;
+  }
+#endif
 
   gpsRefreshAvailability();
   *nav = s_context.gps;
@@ -491,6 +538,21 @@ bool gpsRead(gps_nav_t *nav) {
   if (nav == NULL) {
     return false;
   }
+#if FLATSAT_GPS_OVERRIDE
+  if (s_gps_override_active) {
+    memset(nav, 0, sizeof(*nav));
+    nav->uartOk = true;
+    nav->connected = true;
+    nav->nmeaActive = true;
+    nav->hasFix = true;
+    nav->latitudeE7 = s_gps_override.latitudeE7;
+    nav->longitudeE7 = s_gps_override.longitudeE7;
+    nav->altitudeCm = s_gps_override.altitudeCm;
+    nav->satellites = s_gps_override.satellites;
+    nav->lastFixMs = millis();
+    return true;
+  }
+#endif
   gpsReadReal(nav);
   if (nav->connected && nav->nmeaActive) {
     return nav->uartOk; /* a real GPS is talking: its data wins */
@@ -605,3 +667,7 @@ uint8_t sensorsStatusFlags(void) {
   }
   return flags;
 }
+
+#if FLATSAT_GPS_OVERRIDE
+bool gpsOverrideActive(void) { return s_gps_override_active; }
+#endif

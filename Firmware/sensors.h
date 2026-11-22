@@ -43,4 +43,11 @@ uint8_t gpsStatusByte(const gps_nav_t *nav);
 uint8_t sensorsStatusFlags(void);
 /* true when BME280/LIS2DH12 (and GPS, if no real NMEA arrives) are simulated. */
 bool sensorsSimulated(void);
+
+#if FLATSAT_GPS_OVERRIDE
+void gpsSetOverride(int32_t latE7, int32_t lonE7, int32_t altCm, uint8_t sats);
+void gpsClearOverride(void);
+bool gpsOverrideActive(void);
+#endif
+
 #endif // FIRMWARE_SENSORS_H

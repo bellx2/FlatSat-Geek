@@ -1629,6 +1629,30 @@ void commandApidHandler(space_packet_t *space_packet, command_source_t source) {
     commandGroundStationAccessHandler(space_packet);
   } else if (apid == SPP_APID_TC_GS_STATUS) {
     telemetrySPPTransmitGroundStatus();
+#if FLATSAT_GPS_OVERRIDE
+  } else if (apid == SPP_APID_TC_GPS_OVERRIDE) {
+    const uint16_t data_len = space_packet->header.length + 1;
+    if (data_len < 13) {
+      telemetrySPPTransmitError("GPS OVERRIDE SHORT");
+      return;
+    }
+    const int32_t lat = (int32_t)((uint32_t)space_packet->data[0] |
+                                  ((uint32_t)space_packet->data[1] << 8) |
+                                  ((uint32_t)space_packet->data[2] << 16) |
+                                  ((uint32_t)space_packet->data[3] << 24));
+    const int32_t lon = (int32_t)((uint32_t)space_packet->data[4] |
+                                  ((uint32_t)space_packet->data[5] << 8) |
+                                  ((uint32_t)space_packet->data[6] << 16) |
+                                  ((uint32_t)space_packet->data[7] << 24));
+    const int32_t alt = (int32_t)((uint32_t)space_packet->data[8] |
+                                  ((uint32_t)space_packet->data[9] << 8) |
+                                  ((uint32_t)space_packet->data[10] << 16) |
+                                  ((uint32_t)space_packet->data[11] << 24));
+    gpsSetOverride(lat, lon, alt, space_packet->data[12]);
+    Serial.printf("[INFO] GPS override: lat=%ld lon=%ld alt=%ld sats=%u\r\n",
+                  (long)lat, (long)lon, (long)alt, space_packet->data[12]);
+    telemetrySPPTransmitNavSnapshot();
+#endif
   } else {
     Serial.printf("[ERROR] Unknown APID: 0x%02X \r\n", apid);
     telemetrySPPTransmitError("Error Unknown APID");

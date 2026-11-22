@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-11-22
+
+### Added
+- GPS override command (`TC_GPS_OVERRIDE`, APID 0x14): inject a GPS position
+  over USB with no authentication, enabling Attack 04 (GPS Spoofing) on the
+  GEEK build. Starts active at Tokyo (35.7122N, 139.7038E, 35 m) matching
+  JP-Bootcamp defaults. Clearing the override falls back to the orbit
+  simulation.
+
 ## [1.1.2] - 2026-11-22
 
 ### Changed
