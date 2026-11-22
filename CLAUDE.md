@@ -60,7 +60,7 @@ Key build flags: `-DFLATSAT_NO_RADIO=1`, `-DFLATSAT_LCD_GEEK=1`, `-DFLATSAT_SIM_
 - **`worker.cpp`** — central command dispatcher and mission state machine. Contains `mission_context_t` (file-static), all TC/TM handlers, ground-station authentication logic, and the attack scoreboard milestone triggers. This is the largest and most important file.
 - **`spp.h/.cpp`** — CCSDS Space Packet Protocol: packet build/unpack, primary and secondary headers.
 - **`mission.h`** — APID definitions (TC and TM), mission mode constants, status flag bitmasks. The source of truth for the protocol.
-- **`sensors.h/.cpp`** — BME280, LIS2DH12, GPS (NMEA over UART1). When `FLATSAT_SIM_SENSORS=1`, values are synthesized from `orbit_sim.h` (ISS-like orbital model with thermal cycling).
+- **`sensors.h/.cpp`** — BME280, LIS2DH12, GPS (NMEA over UART1). When `FLATSAT_SIM_SENSORS=1`, values are synthesized: GEEK builds use a circular orbit near Tsukuba (~4 min in range / ~6 min out per 10-min cycle); non-GEEK builds use `orbit_sim.h` (ISS-like orbit). Both include thermal cycling.
 - **`lcd_status.h/.cpp`** — ST7789 LCD driver and three screen pages (Status, Attack Scoreboard, System). Compiled in only with `FLATSAT_LCD_GEEK=1`. Draws to an off-screen `GFXcanvas16` and pushes via SPI1.
 - **`secure_link.h/.cpp`** — AES-128-ECB "encryption" layer (deliberately weak, part of the exercise).
 - **`usbCDC.h/.cpp`** — dual USB CDC: `Serial` (console) + `USBRadioLink` (SPP frame transport).
@@ -76,11 +76,11 @@ Key build flags: `-DFLATSAT_NO_RADIO=1`, `-DFLATSAT_LCD_GEEK=1`, `-DFLATSAT_SIM_
 
 ### Ground-station gate
 
-When GS mode is enabled, most commands require GPS fix within 35 km of Las Vegas (36.1699N, 115.1398W) *and* an active authenticated session (challenge-response with shared key `0xC0DEFACE`). The `pico2_geek_sim` build simulates an ISS-like orbit; the ground track passes over Las Vegas briefly (~3 s window).
+When GS mode is enabled, most commands require GPS fix within ground-station range *and* an active authenticated session (challenge-response with shared key `0xC0DEFACE`). GEEK builds use JAXA Tsukuba (36.0604N, 140.1335E, 100 km radius); non-GEEK builds use Las Vegas (36.1699N, 115.1398W, 35 km). The `pico2_geek_sim` build enters range ~30 s after boot for ~4 min, then ~6 min out, repeating every 10 min.
 
 ## Conventions
 
 - License: GPL-2.0-or-later. All new files need the SPDX header.
 - Packet byte order: SPP headers are big-endian (use `HOST_TO_BE16`/`BE_TO_HOST16`); telemetry payload fields are little-endian (use `bufferPackU16LE` etc.).
 - LCD pin mapping is from the RP2350-GEEK schematic: DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25.
-- Prebuilt UF2s in `Firmware/build/` should be refreshed when releasing: build all GEEK environments and copy the outputs there.
+- UF2 binaries are not tracked in git; attach them to GitHub releases. `gen_version.py` names the output with the version (e.g. `flatsat-pico2_geek_sim-v1.1.2.uf2`).
