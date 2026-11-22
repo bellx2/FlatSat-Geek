@@ -28,12 +28,10 @@ The screen shows a `SIM` chip, and the boot log prints `[INFO] SIM: ...`.
 
 Simulated GPS (`-DFLATSAT_SIM_GPS_MODE=n`):
 
-- `0` (default): a satellite on an ISS-like circular orbit (420 km, 51.6 deg,
-  period ~92.8 min), see `orbit_sim.h`. Starts over Tokyo heading north-east.
-  `-DFLATSAT_SIM_ORBIT_SPEEDUP=60` runs it 60x faster. The ground-station
-  gate (35 km) opens only for a few seconds when the track passes over Las
-  Vegas (first time about 21 min after boot, about 3 s).
-- `1`: small fixed track over the ground station, gate stays open.
+- `0` (default): circular orbit near JAXA Tsukuba (period 10 min, altitude
+  420 km). Enters the ground-station gate (100 km) about 30 s after boot
+  for ~4 min, then ~6 min out of range, repeating.
+- `1`: small fixed track over the ground station (Tsukuba), gate stays open.
 - `2`: small fixed track over Tokyo, gate stays closed.
 
 Simulated environment (space-like):
@@ -61,7 +59,7 @@ on the RP2350-GEEK (USB only, no radio):
 | 02 | Fuzzing / Crash | Partial | Command accepted but transmission blocked (`RADIO DISABLED`) |
 | 03 | Command Injection | Yes | |
 | 04 | GPS Spoofing | No | Requires SDR + GPS hardware |
-| 05 | GS Auth Spoofing | Conditional | Needs GPS within ground-station range; use `pico2_geek_sim` with `GPS_MODE=1` |
+| 05 | GS Auth Spoofing | Conditional | Needs GPS within ground-station range (Tsukuba, 100 km); default orbit enters range every 10 min, or use `GPS_MODE=1` |
 | 06 | Replay | Yes | |
 | 07 | RESETC | Yes | |
 
