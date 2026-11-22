@@ -506,7 +506,11 @@ bool gpsRead(gps_nav_t *nav) {
   alt_m = orb.alt_m;
 #else
 #if FLATSAT_SIM_GPS_MODE == 1
-  const double base_lat = 36.1699, base_lon = -115.1398; /* = GS position in worker.cpp */
+#if FLATSAT_LCD_GEEK
+  const double base_lat = 36.0604, base_lon = 140.1335; /* JAXA Tsukuba */
+#else
+  const double base_lat = 36.1699, base_lon = -115.1398; /* Las Vegas */
+#endif
 #else
   const double base_lat = 35.6812, base_lon = 139.7671;
 #endif

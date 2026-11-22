@@ -130,9 +130,15 @@ static const uint8_t flash_window_blob[] __attribute__((used)) =
     "MAINT:FLASH_WINDOW=A5:C35A\r\n"
     "FLAG=PWNSAT{flash_window_store_and_forward}\r\n";
 static const uint16_t flash_window_blob_len = sizeof(flash_window_blob) - 1;
+#if FLATSAT_LCD_GEEK
+static const int32_t gs_station_lat_e7 = 360604000L;   // 36.0604 -- JAXA Tsukuba
+static const int32_t gs_station_lon_e7 = 1401335000L;   // 140.1335
+static const uint16_t gs_station_radius_m = 100000;      // 100 km
+#else
 static const int32_t gs_station_lat_e7 = 361699000L;   // 36.1699 -- Las Vegas, Nevada
 static const int32_t gs_station_lon_e7 = -1151398000L; // -115.1398
 static const uint16_t gs_station_radius_m = 35000;
+#endif
 static const unsigned long gs_session_window_ms = 300000UL;
 static const unsigned long gs_handshake_window_ms = 60000UL;
 static const uint32_t gs_shared_auth_key = 0xC0DEFACEUL;
