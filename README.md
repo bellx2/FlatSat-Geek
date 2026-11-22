@@ -58,7 +58,7 @@ on the RP2350-GEEK (USB only, no radio):
 | 01 | Eavesdropping | Yes | Capture telemetry from USB instead of RF |
 | 02 | Fuzzing / Crash | Partial | Command accepted but transmission blocked (`RADIO DISABLED`) |
 | 03 | Command Injection | Yes | |
-| 04 | GPS Spoofing | No | Requires SDR + GPS hardware |
+| 04 | GPS Spoofing | Yes | `TC_GPS_OVERRIDE` (APID 0x14) injects a position over USB |
 | 05 | GS Auth Spoofing | Conditional | Needs GPS within ground-station range (Tsukuba, 100 km); default orbit enters range every 10 min, or use `GPS_MODE=1` |
 | 06 | Replay | Yes | |
 | 07 | RESETC | Yes | |
