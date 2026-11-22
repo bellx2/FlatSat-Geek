@@ -133,11 +133,11 @@ static const uint16_t flash_window_blob_len = sizeof(flash_window_blob) - 1;
 #if FLATSAT_LCD_GEEK
 static const int32_t gs_station_lat_e7 = 360604000L;   // 36.0604 -- JAXA Tsukuba
 static const int32_t gs_station_lon_e7 = 1401335000L;   // 140.1335
-static const uint16_t gs_station_radius_m = 100000;      // 100 km
+static const uint32_t gs_station_radius_m = 100000;      // 100 km
 #else
 static const int32_t gs_station_lat_e7 = 361699000L;   // 36.1699 -- Las Vegas, Nevada
 static const int32_t gs_station_lon_e7 = -1151398000L; // -115.1398
-static const uint16_t gs_station_radius_m = 35000;
+static const uint32_t gs_station_radius_m = 35000;
 #endif
 static const unsigned long gs_session_window_ms = 300000UL;
 static const unsigned long gs_handshake_window_ms = 60000UL;
@@ -1152,7 +1152,7 @@ static void telemetrySPPTransmitGroundStatus(void) {
   bufferPackU16LE(buffer, &offset, groundStationHandshakeRemainingSeconds());
   bufferPackI32LE(buffer, &offset, gs_station_lat_e7);
   bufferPackI32LE(buffer, &offset, gs_station_lon_e7);
-  bufferPackU16LE(buffer, &offset, gs_station_radius_m);
+  bufferPackU16LE(buffer, &offset, gs_station_radius_m > 65535 ? 65535 : (uint16_t)gs_station_radius_m);
 
   space_packet_t tm_packet;
   const int ret = telemetrySPPBuildPacket(

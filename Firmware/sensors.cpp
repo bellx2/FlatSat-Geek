@@ -499,11 +499,25 @@ bool gpsRead(gps_nav_t *nav) {
   const unsigned long now = millis();
   double lat, lon, alt_m;
 #if FLATSAT_SIM_GPS_MODE == 0
+#if FLATSAT_LCD_GEEK
+  /* 筑波付近の円軌道 (周期10分, 高度420 km)。
+   * 中心を北にずらし、GS圏 (100 km) を周期的に出入りする。
+   * 起動直後~4分間圏内、その後~6分間圏外。 */
+  const double gs_lat = 36.0604, gs_lon = 140.1335;
+  const double center_lat = gs_lat + 0.72; /* ~80 km 北にオフセット */
+  const double orbit_r = 0.81; /* 度 (~90 km) */
+  const double orbit_period = 600.0; /* 秒 */
+  const double ph = 2.0 * M_PI * fmod((double)now / 1000.0, orbit_period) / orbit_period + 1.1 * M_PI;
+  lat = center_lat + orbit_r * sin(ph);
+  lon = gs_lon + orbit_r * cos(ph) / cos(lat * M_PI / 180.0);
+  alt_m = 420000.0;
+#else
   orbit_state_t orb;
   orbitState((double)now / 1000.0 * FLATSAT_SIM_ORBIT_SPEEDUP, &orb);
   lat = orb.lat_deg;
   lon = orb.lon_deg;
   alt_m = orb.alt_m;
+#endif
 #else
 #if FLATSAT_SIM_GPS_MODE == 1
 #if FLATSAT_LCD_GEEK
