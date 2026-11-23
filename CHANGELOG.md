@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-11-23
+
+### Added
+- IDS event channel from JP-Bootcamp v1.0.5 (`ids_events.h/.cpp`, TM APID
+  0x20): one 15-octet cleartext event per received frame over USB, so the
+  JP-Bootcamp Space IDS rules that need the board's own events can fire
+- Flash window now ends with `MAINT:PROV_BLOCK=16` and the link key, so the
+  flash-dump lab can recover the key from the extracted image
+- `TC_GPS_OVERRIDE` with a 1-octet payload `0x00` clears the override and
+  returns to the simulated orbit (or the real GPS)
+- `OVR` chip on the LCD status page while the GPS override is active
+- Per-board USB serial number `fsat-<chip id>`; product string carries the
+  firmware version
+
+### Fixed
+- BOOT button ignored while waiting for the USB console (`WAIT USB CONSOLE`):
+  the wait loop now polls it, so both page switch and flip work there
+- Telemetry replies arriving late in bursts (USB TX now flushed per frame)
+- Board stopping command handling when a host holds the console or the
+  link port open without reading (bounded TX wait, guarded console writes)
+- Telecommands delayed up to 1 s by a blocking `readBytes()` on USB RX
+
+### Changed
+- Ground station for GEEK builds moved from Tsukuba (100 km) to Sapporo
+  (43.0618N, 141.3545E, 35 km), matching JP-Bootcamp. The Tokyo start
+  position was inside the old radius, so the gate opened without GPS
+  spoofing; it now starts closed. Simulated orbit and `GPS_MODE=1` track
+  moved to Sapporo accordingly
+- Per-frame USB hexdump on the console is off by default
+  (`-DFLATSAT_USB_HEXDUMP=1` restores it)
+- `SEND_FW` reports protocol level 1.0.5 (was 1.0.0)
+
 ## [1.1.3] - 2026-11-22
 
 ### Added

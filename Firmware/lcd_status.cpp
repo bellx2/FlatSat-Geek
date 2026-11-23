@@ -233,35 +233,10 @@ void lcdStatusBegin(void) {
   lcd_ready = true;
 }
 
-/* Poll the BOOT button during the boot screen (before the main worker loop
- * and its bootButtonAction() are running). Called in a tight loop so it does
- * its own timing. Only long-press (flip) is handled here. */
-static void lcdBootPollButton(void) {
-  const unsigned long now = millis();
-  if (now - boot_poll_ms < 80) {
-    return;
-  }
-  boot_poll_ms = now;
-  const bool down = BOOTSEL;
-  if (down && !boot_was_down) {
-    boot_press_start = now;
-    boot_long_handled = false;
-  } else if (down && boot_was_down && !boot_long_handled) {
-    if (now - boot_press_start >= BOOT_LONG_PRESS_MS) {
-      boot_long_handled = true;
-      lcdFlip();
-    }
-  } else if (!down && boot_was_down) {
-    boot_long_handled = false;
-  }
-  boot_was_down = down;
-}
+/* Message shown on page 1 of the boot screen (WAIT USB CONSOLE etc.). */
+static const char *boot_msg = "";
 
-void lcdStatusBoot(const char *message) {
-  if (!lcd_ready) {
-    return;
-  }
-  lcdBootPollButton();
+static void drawBootScreen(void) {
   canvas->fillScreen(C_BG);
   canvas->fillRect(0, 0, LCD_W, 22, C_BAR);
   canvas->setTextColor(C_TEXT);
@@ -284,8 +259,7 @@ void lcdStatusBoot(const char *message) {
   canvas->setTextColor(C_HIT);
   canvas->setTextSize(2);
   canvas->setCursor(6, 90);
-  canvas->print(message);
-  lcdPush();
+  canvas->print(boot_msg);
 }
 
 void lcdStatusNoteCommand(uint16_t apid, uint8_t source) {
@@ -520,6 +494,67 @@ static void pageSystem(unsigned long now, uint8_t sflags) {
   canvas->print("BOOT button: next page");
 }
 
+static void drawHeader(unsigned long now) {
+  /* Header: name + uptime */
+  canvas->fillRect(0, 0, LCD_W, 20, C_BAR);
+  canvas->setTextColor(C_TEXT);
+  canvas->setTextSize(2);
+  canvas->setCursor(6, 3);
+  canvas->print("FLATSAT");
+  canvas->setTextSize(1);
+  canvas->setCursor(6 + 7 * 12, 10); /* smaller suffix, same baseline */
+  canvas->print(" - Geek");
+  const unsigned long s = now / 1000;
+  canvas->setTextSize(1);
+  canvas->setCursor(LCD_W - 6 * 8 - 6, 6);
+  canvas->printf("%02lu:%02lu:%02lu", (s / 3600) % 100, (s / 60) % 60, s % 60);
+  canvas->setCursor(150, 6);
+  canvas->setTextColor(C_TEXT);
+  canvas->printf("%u/%u", (unsigned)page + 1, (unsigned)LCD_PAGES);
+}
+
+/* Boot: page 1 is the boot screen, pages 2/3 are the normal scoreboard and
+ * system pages, so the button works the same before the main loop runs. */
+static void drawBootPage(unsigned long now) {
+  if (page == 0) {
+    drawBootScreen();
+  } else {
+    canvas->fillScreen(C_BG);
+    drawHeader(now);
+    if (page == 1) {
+      pageScoreboard(now);
+    } else {
+      pageSystem(now, sensorsStatusFlags());
+    }
+  }
+  lcdPush();
+}
+
+void lcdStatusBoot(const char *message) {
+  if (!lcd_ready) {
+    return;
+  }
+  boot_msg = message;
+  drawBootPage(millis());
+}
+
+void lcdStatusBootIdle(void) {
+  if (!lcd_ready) {
+    return;
+  }
+  const unsigned long now = millis();
+  const uint8_t btn = bootButtonAction(now);
+  if (btn == BTN_SHORT) {
+    page = (uint8_t)((page + 1) % LCD_PAGES);
+  } else if (btn == BTN_LONG) {
+    lcdFlip();
+  } else if (now - last_draw_ms < 500) {
+    return;
+  }
+  last_draw_ms = now;
+  drawBootPage(now);
+}
+
 void lcdStatusWorker(void) {
   if (!lcd_ready) {
     return;
@@ -553,22 +588,7 @@ void lcdStatusWorker(void) {
 
   canvas->fillScreen(C_BG);
 
-  /* Header: name + uptime */
-  canvas->fillRect(0, 0, LCD_W, 20, C_BAR);
-  canvas->setTextColor(C_TEXT);
-  canvas->setTextSize(2);
-  canvas->setCursor(6, 3);
-  canvas->print("FLATSAT");
-  canvas->setTextSize(1);
-  canvas->setCursor(6 + 7 * 12, 10); /* smaller suffix, same baseline */
-  canvas->print(" - Geek");
-  const unsigned long s = now / 1000;
-  canvas->setTextSize(1);
-  canvas->setCursor(LCD_W - 6 * 8 - 6, 6);
-  canvas->printf("%02lu:%02lu:%02lu", (s / 3600) % 100, (s / 60) % 60, s % 60);
-  canvas->setCursor(150, 6);
-  canvas->setTextColor(C_TEXT);
-  canvas->printf("%u/%u", (unsigned)page + 1, (unsigned)LCD_PAGES);
+  drawHeader(now);
 
   if (page == 1) {
     pageScoreboard(now);
@@ -639,8 +659,21 @@ void lcdStatusWorker(void) {
       gps_txt = "GPS quiet";
     }
   }
+#if FLATSAT_GPS_OVERRIDE
+  /* 上書き中は位置が偽物なので OVR を出す。行幅に収めるため GPS 側は短くする */
+  const bool gps_ovr = gpsOverrideActive();
+  if (gps_ovr) {
+    gps_txt = "GPS";
+  }
+#endif
   chip(x, row_sens, gps_txt, gps_col);
   x += chipWidth(gps_txt);
+#if FLATSAT_GPS_OVERRIDE
+  if (gps_ovr) {
+    chip(x, row_sens, "OVR", C_WARN);
+    x += chipWidth("OVR");
+  }
+#endif
   if (sensorsSimulated()) {
     chip(x, row_sens, "SIM", C_WARN);
     x += chipWidth("SIM");

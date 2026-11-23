@@ -7,6 +7,7 @@
  */
 
 #include "hardware/watchdog.h"
+#include "ids_events.h"
 #include "lcd_status.h"
 #include "led.h"
 #include "mission.h"
@@ -128,12 +129,16 @@ static const uint8_t flash_window_blob[] __attribute__((used)) =
     "OPS:STORE_FORWARD=ENABLED\r\n"
     "OPS:PAYLOAD_WINDOW=0420Z\r\n"
     "MAINT:FLASH_WINDOW=A5:C35A\r\n"
-    "FLAG=PWNSAT{flash_window_store_and_forward}\r\n";
+    "FLAG=PWNSAT{flash_window_store_and_forward}\r\n"
+    "MAINT:PROV_BLOCK=16\r\n"
+    "PWNsatLabKey1234\r\n";
 static const uint16_t flash_window_blob_len = sizeof(flash_window_blob) - 1;
 #if FLATSAT_LCD_GEEK
-static const int32_t gs_station_lat_e7 = 360604000L;   // 36.0604 -- JAXA Tsukuba
-static const int32_t gs_station_lon_e7 = 1401335000L;   // 140.1335
-static const uint32_t gs_station_radius_m = 100000;      // 100 km
+/* JP-Bootcamp と同じ札幌・35 km。初期位置の東京 (~830 km) からは圏外なので、
+ * GPS 偽装 (APID 0x14) で位置を動かさない限りゲートは開かない。 */
+static const int32_t gs_station_lat_e7 = 430618000L;   // 43.0618 -- Sapporo, Hokkaido
+static const int32_t gs_station_lon_e7 = 1413545000L;  // 141.3545
+static const uint32_t gs_station_radius_m = 35000;     // 35 km
 #else
 static const int32_t gs_station_lat_e7 = 361699000L;   // 36.1699 -- Las Vegas, Nevada
 static const int32_t gs_station_lon_e7 = -1151398000L; // -115.1398
@@ -157,6 +162,56 @@ static int telemetrySPPBuildPacketEx(space_packet_t *space_packet, uint8_t flag,
                                      uint16_t sec_header_len, uint16_t apid,
                                      const uint8_t *data, uint16_t data_len,
                                      bool force_cleartext);
+
+
+/* ---- console guard -------------------------------------------------------
+ *
+ * Adafruit_USBD_CDC::write spins in `while (remain && connected)` until the
+ * FIFO drains, and a host that holds the console open without reading it
+ * never drains it. The command handler runs on core 1 and logs as it works,
+ * so one idle terminal was enough to park core 1 inside a printf: the board
+ * kept sending its heartbeat from core 0 and stopped accepting commands
+ * entirely. Measured 7 Nov 2026, where opening the console and not reading it
+ * stopped the board answering in under two seconds. On a bench with twenty
+ * laptops that is not an edge case, it is Tuesday.
+ *
+ * Every console line in this file goes through the object below, which writes
+ * only when there is room and drops the line when there is not. Logging is
+ * worth less than the command path that produces it. Nothing else changes:
+ * a console somebody is actually reading prints exactly what it printed
+ * before.
+ */
+class GuardedConsole {
+ public:
+  template <typename... Args>
+  void printf(const char *fmt, Args... args) {
+    if (room()) ::Serial.printf(fmt, args...);
+  }
+  template <typename T>
+  void print(T v) {
+    if (room()) ::Serial.print(v);
+  }
+  template <typename T>
+  void println(T v) {
+    if (room()) ::Serial.println(v);
+  }
+  void println(void) {
+    if (room()) ::Serial.println();
+  }
+  int availableForWrite(void) { return ::Serial.availableForWrite(); }
+
+ private:
+  /* The TX FIFO is 256 octets and the longest line in this file is about 80.
+   * 96 leaves room for a whole line with slack, so a write never waits on the
+   * far end.
+   *
+   * Do not raise it. At 192, a heartbeat keeping the buffer part-full means
+   * the test for room almost never passes and the console goes silent. */
+  static bool room(void) { return ::Serial.availableForWrite() >= 96; }
+};
+
+static GuardedConsole g_console;
+#define Serial g_console
 
 static uint8_t crc8_compute(const uint8_t *data, uint32_t len) {
   uint8_t crc = 0x00;
@@ -1027,7 +1082,15 @@ static void telemetrySPPTransmitBeacon(void) {
   dispatchTelemetryPacket(&tm_packet, false);
 }
 
+/* v1.0.5: set whenever the firmware answers a command with an error, so
+ * the IDS event can say the command was refused instead of reporting it as
+ * executed. Every refusal inside a handler goes through this function, which
+ * is why one flag is enough -- and why a handler that refuses silently would
+ * be a bug worth catching. Cleared at the start of each received frame. */
+static bool handler_refused = false;
+
 static void telemetrySPPTransmitError(const char *message) {
+  handler_refused = true;
   uint8_t buffer[MAX_PAYLOAD_CHUNK] = {0};
   size_t message_len = strnlen(message, MAX_PAYLOAD_CHUNK - 1);
   memcpy(buffer, message, message_len);
@@ -1632,6 +1695,14 @@ void commandApidHandler(space_packet_t *space_packet, command_source_t source) {
 #if FLATSAT_GPS_OVERRIDE
   } else if (apid == SPP_APID_TC_GPS_OVERRIDE) {
     const uint16_t data_len = space_packet->header.length + 1;
+    /* 1 オクテットの 0x00 は上書き解除。sim ビルドは軌道シミュレーションに、
+     * 実 GPS 付きなら NMEA の位置に戻る。13 オクテットの設定形式とは長さで区別する。 */
+    if (data_len == 1 && space_packet->data[0] == 0x00) {
+      gpsClearOverride();
+      Serial.println("[INFO] GPS override cleared");
+      telemetrySPPTransmitNavSnapshot();
+      return;
+    }
     if (data_len < 13) {
       telemetrySPPTransmitError("GPS OVERRIDE SHORT");
       return;
@@ -1661,12 +1732,29 @@ void commandApidHandler(space_packet_t *space_packet, command_source_t source) {
 
 static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
                                    command_source_t source) {
+  // v1.0.5: one event per received frame, for the IDS. Opened here, before
+  // anything can reject the frame, so frames that never parse are reported
+  // too -- those are the interesting ones.
+  ids_event_t event;
+  handler_refused = false;
+  idsEventBegin(&event,
+                source == COMMAND_SOURCE_USB ? IDS_ORIGIN_USB : IDS_ORIGIN_RADIO,
+                buffer, buffer_len);
+  event.mission_mode = mission_ctx.mode;
+  if (secureLinkIsEnabled()) {
+    event.flags |= IDS_FLAG_ENCRYPTED;
+  }
+  if (mission_ctx.payloadArmed) {
+    event.flags |= IDS_FLAG_PAYLOAD_ARMED;
+  }
+
   space_packet_t space_packet;
   int ret = spp_unpack_packet(&space_packet, buffer, buffer_len);
   if (ret != SPP_ERROR_NONE) {
     Serial.print("[ERROR] Unpacking SPP: ");
     Serial.println(ret);
     ledBlink(8, LED_COLOR_YELLOW);
+    idsEventEmit(&event, IDS_RESULT_SPP_ERROR);
     return;
   }
   logger_spp_tc(&space_packet);
@@ -1679,6 +1767,7 @@ static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
                                     ? "AES CONFIG FAIL"
                                     : "DEBUG CONFIG FAIL");
       ledBlink(8, LED_COLOR_YELLOW);
+      idsEventEmit(&event, IDS_RESULT_PAYLOAD_ERROR);
       return;
     }
 
@@ -1686,9 +1775,11 @@ static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
       if (source != COMMAND_SOURCE_USB) {
         telemetrySPPTransmitError("DEBUG USB ONLY");
         ledBlink(4, LED_COLOR_YELLOW);
+        idsEventEmit(&event, IDS_RESULT_SOURCE_REJECT);
         return;
       }
       commandDebugConfigHandler(new_state);
+      idsEventFinish(&event, handler_refused);
       return;
     }
 
@@ -1699,9 +1790,11 @@ static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
       telemetrySPPTransmitError(gs_reason);
       telemetrySPPTransmitGroundStatus();
       ledBlink(4, LED_COLOR_YELLOW);
+      idsEventEmit(&event, IDS_RESULT_GATE_REJECT);
       return;
     }
     commandAesConfigHandler(new_state);
+    idsEventFinish(&event, handler_refused);
     return;
   }
 
@@ -1721,9 +1814,11 @@ static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
       telemetrySPPTransmitError(gs_reason);
       telemetrySPPTransmitGroundStatus();
       ledBlink(4, LED_COLOR_YELLOW);
+      idsEventEmit(&event, IDS_RESULT_GATE_REJECT);
       return;
     }
     commandApidHandler(&space_packet, source);
+    idsEventFinish(&event, handler_refused);
     return;
   }
 
@@ -1731,6 +1826,7 @@ static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
     Serial.println("[ERROR] Secure link payload decrypt failed");
     telemetrySPPTransmitError("AES DECRYPT FAIL");
     ledBlink(8, LED_COLOR_YELLOW);
+    idsEventEmit(&event, IDS_RESULT_DECRYPT_FAIL);
     return;
   }
 
@@ -1741,9 +1837,11 @@ static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
     telemetrySPPTransmitError(gs_reason);
     telemetrySPPTransmitGroundStatus();
     ledBlink(4, LED_COLOR_YELLOW);
+    idsEventEmit(&event, IDS_RESULT_GATE_REJECT);
     return;
   }
   commandApidHandler(&space_packet, source);
+  idsEventFinish(&event, handler_refused);
 }
 
 void commandHandler(uint8_t *buffer, uint16_t buffer_len) {

@@ -20,6 +20,9 @@ SX1262 radio0 = new Module(PIN_RADIO0_NSS, PIN_RADIO0_DIO1, PIN_RADIO0_RST,
 static radioPacketReceivedCb radi_recv_cb = NULL;
 
 volatile bool receivedFlag = false;
+static float last_rssi = 0.0f;
+static float last_snr = 0.0f;
+static bool last_crc_bad = false;
 volatile bool enableInterruptRadio = true;
 
 static void log_line(const char *type, const char *msg) {
@@ -142,11 +145,16 @@ void uplinkRadioCheckPacketReceived(void) {
 
     byte byteArr[recvLen];
     int state = radio0.readData(byteArr, recvLen);
+    // Measured per frame, read before anything else touches the radio.
+    last_rssi = radio0.getRSSI();
+    last_snr = radio0.getSNR();
+    last_crc_bad = (state == RADIOLIB_ERR_CRC_MISMATCH);
     if (state == RADIOLIB_ERR_NONE || state == RADIOLIB_ERR_CRC_MISMATCH) {
       if (radi_recv_cb != NULL) {
         printHexDump(byteArr, recvLen);
-        uint8_t parsed[recvLen];
-        size_t parsedLen = hexStringToBytes(byteArr, recvLen, parsed);
+        // v1.0.5: the hex-to-bytes conversion that used to sit here
+        // computed a buffer nobody read -- the callback always got the raw
+        // frame. Removed; behaviour is unchanged.
         radi_recv_cb(byteArr, recvLen);
       } else {
         Serial.print("[INFO] Radio 0 Recv: ");
@@ -173,3 +181,8 @@ void uplinkRadioCheckPacketReceived(void) {
     enableInterruptRadio = true;
   }
 }
+float uplinkRadioLastRssi(void) { return last_rssi; }
+
+float uplinkRadioLastSnr(void) { return last_snr; }
+
+bool uplinkRadioLastCrcBad(void) { return last_crc_bad; }

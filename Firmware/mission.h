@@ -9,7 +9,9 @@
 #define FIRMWARE_MISSION_H
 #include <Arduino.h>
 
-#define FIRMWARE_PATCH 0
+/* Upstream protocol level reported by SEND_FW. The GEEK release number is
+ * FW_VERSION in version.h. */
+#define FIRMWARE_PATCH 5
 #define FIRMWARE_MINOR 0
 #define FIRMWARE_MAJOR 1
 
@@ -103,5 +105,8 @@
 #define SPP_APID_TM_GS_ACCESS 0x12
 #define SPP_APID_TM_GS_STATUS 0x13
 #define SPP_APID_TM_GPS_OVERRIDE 0x14
+/* One event per received frame, for the IDS. Cleartext, USB only,
+ * versioned -- see ids_events.h. */
+#define SPP_APID_TM_IDS_EVENT 0x20
 
 #endif // FIRMWARE_MISSION_H

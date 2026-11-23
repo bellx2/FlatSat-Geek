@@ -562,12 +562,12 @@ bool gpsRead(gps_nav_t *nav) {
   double lat, lon, alt_m;
 #if FLATSAT_SIM_GPS_MODE == 0
 #if FLATSAT_LCD_GEEK
-  /* 筑波付近の円軌道 (周期10分, 高度420 km)。
-   * 中心を北にずらし、GS圏 (100 km) を周期的に出入りする。
+  /* 札幌付近の円軌道 (周期10分, 高度420 km)。GPS 上書きを解除したときだけ使う。
+   * 中心を北にずらし、GS圏 (35 km) を周期的に出入りする。
    * 起動直後~4分間圏内、その後~6分間圏外。 */
-  const double gs_lat = 36.0604, gs_lon = 140.1335;
-  const double center_lat = gs_lat + 0.72; /* ~80 km 北にオフセット */
-  const double orbit_r = 0.81; /* 度 (~90 km) */
+  const double gs_lat = 43.0618, gs_lon = 141.3545;
+  const double center_lat = gs_lat + 0.252; /* ~28 km 北にオフセット */
+  const double orbit_r = 0.2835; /* 度 (~32 km) */
   const double orbit_period = 600.0; /* 秒 */
   const double ph = 2.0 * M_PI * fmod((double)now / 1000.0, orbit_period) / orbit_period + 1.1 * M_PI;
   lat = center_lat + orbit_r * sin(ph);
@@ -583,7 +583,7 @@ bool gpsRead(gps_nav_t *nav) {
 #else
 #if FLATSAT_SIM_GPS_MODE == 1
 #if FLATSAT_LCD_GEEK
-  const double base_lat = 36.0604, base_lon = 140.1335; /* JAXA Tsukuba */
+  const double base_lat = 43.0618, base_lon = 141.3545; /* Sapporo */
 #else
   const double base_lat = 36.1699, base_lon = -115.1398; /* Las Vegas */
 #endif

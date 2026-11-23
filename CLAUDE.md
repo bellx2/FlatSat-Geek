@@ -60,8 +60,9 @@ Key build flags: `-DFLATSAT_NO_RADIO=1`, `-DFLATSAT_LCD_GEEK=1`, `-DFLATSAT_SIM_
 - **`worker.cpp`** — central command dispatcher and mission state machine. Contains `mission_context_t` (file-static), all TC/TM handlers, ground-station authentication logic, and the attack scoreboard milestone triggers. This is the largest and most important file.
 - **`spp.h/.cpp`** — CCSDS Space Packet Protocol: packet build/unpack, primary and secondary headers.
 - **`mission.h`** — APID definitions (TC and TM), mission mode constants, status flag bitmasks. The source of truth for the protocol.
-- **`sensors.h/.cpp`** — BME280, LIS2DH12, GPS (NMEA over UART1). When `FLATSAT_SIM_SENSORS=1`, values are synthesized: GEEK builds use a circular orbit near Tsukuba (~4 min in range / ~6 min out per 10-min cycle); non-GEEK builds use `orbit_sim.h` (ISS-like orbit). Both include thermal cycling.
+- **`sensors.h/.cpp`** — BME280, LIS2DH12, GPS (NMEA over UART1). When `FLATSAT_SIM_SENSORS=1`, values are synthesized: GEEK builds use a circular orbit near Sapporo (~4 min in range / ~6 min out per 10-min cycle; only used when the GPS override is inactive); non-GEEK builds use `orbit_sim.h` (ISS-like orbit). Both include thermal cycling.
 - **`lcd_status.h/.cpp`** — ST7789 LCD driver and three screen pages (Status, Attack Scoreboard, System). Compiled in only with `FLATSAT_LCD_GEEK=1`. Draws to an off-screen `GFXcanvas16` and pushes via SPI1.
+- **`ids_events.h/.cpp`** — IDS event channel (TM APID 0x20, ported from JP-Bootcamp v1.0.5): one cleartext 15-octet event per received frame, USB only. Emitted from `commandHandlerInternal()`.
 - **`secure_link.h/.cpp`** — AES-128-ECB "encryption" layer (deliberately weak, part of the exercise).
 - **`usbCDC.h/.cpp`** — dual USB CDC: `Serial` (console) + `USBRadioLink` (SPP frame transport).
 - **`radio_off.h/.cpp`** — holds SX1262 chips in hardware reset when `FLATSAT_NO_RADIO=1`.
@@ -76,7 +77,7 @@ Key build flags: `-DFLATSAT_NO_RADIO=1`, `-DFLATSAT_LCD_GEEK=1`, `-DFLATSAT_SIM_
 
 ### Ground-station gate
 
-When GS mode is enabled, most commands require GPS fix within ground-station range *and* an active authenticated session (challenge-response with shared key `0xC0DEFACE`). GEEK builds use JAXA Tsukuba (36.0604N, 140.1335E, 100 km radius); non-GEEK builds use Las Vegas (36.1699N, 115.1398W, 35 km). The `pico2_geek_sim` build enters range ~30 s after boot for ~4 min, then ~6 min out, repeating every 10 min.
+When GS mode is enabled, most commands require GPS fix within ground-station range *and* an active authenticated session (challenge-response with shared key `0xC0DEFACE`). GEEK builds use Sapporo (43.0618N, 141.3545E, 35 km radius), matching JP-Bootcamp; non-GEEK builds use Las Vegas (36.1699N, 115.1398W, 35 km). GEEK builds boot with the GPS override active at Tokyo (~830 km away), so the gate stays closed until the position is spoofed with `TC_GPS_OVERRIDE` (APID 0x14). A 1-octet payload `0x00` on the same APID clears the override and returns to the simulated orbit.
 
 ## Conventions
 

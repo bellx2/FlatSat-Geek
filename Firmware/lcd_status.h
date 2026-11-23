@@ -24,6 +24,8 @@ void lcdMissionSnapshot(lcd_mission_t *snapshot);
 
 void lcdStatusBegin(void);
 void lcdStatusBoot(const char *message);
+/* Call repeatedly while blocked during boot: handles the BOOT button. */
+void lcdStatusBootIdle(void);
 void lcdStatusWorker(void);
 void lcdStatusNoteCommand(uint16_t apid, uint8_t source);
 void lcdStatusNoteTx(void);
@@ -32,6 +34,7 @@ void lcdStatusNoteTx(void);
 
 static inline void lcdStatusBegin(void) {}
 static inline void lcdStatusBoot(const char *) {}
+static inline void lcdStatusBootIdle(void) {}
 static inline void lcdStatusWorker(void) {}
 static inline void lcdStatusNoteCommand(uint16_t, uint8_t) {}
 static inline void lcdStatusNoteTx(void) {}

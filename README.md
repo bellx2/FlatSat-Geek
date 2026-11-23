@@ -26,12 +26,25 @@ The screen shows a `SIM` chip, and the boot log prints `[INFO] SIM: ...`.
 
     pio run -e pico2_geek_sim
 
-Simulated GPS (`-DFLATSAT_SIM_GPS_MODE=n`):
+Ground station and starting position (same as JP-Bootcamp): the ground
+station is in Sapporo (43.0618N, 141.3545E, 35 km radius). The board boots
+with the GPS override active at Tokyo (35.7122N, 139.7038E), about 830 km
+away, so the gate starts closed and only opens after the position is spoofed
+with `TC_GPS_OVERRIDE` (APID 0x14).
 
-- `0` (default): circular orbit near JAXA Tsukuba (period 10 min, altitude
-  420 km). Enters the ground-station gate (100 km) about 30 s after boot
-  for ~4 min, then ~6 min out of range, repeating.
-- `1`: small fixed track over the ground station (Tsukuba), gate stays open.
+While the override is active the simulated GPS below is not used. Send
+`TC_GPS_OVERRIDE` with a 1-octet payload `0x00` to clear it: the sim build
+goes back to the simulated orbit, a board with a real GPS goes back to its
+NMEA position. Sending a 13-octet position sets the override again. Like other
+commands, it is refused while the ground-station gate is closed. A reset
+restores the Tokyo override.
+
+Simulated GPS (`-DFLATSAT_SIM_GPS_MODE=n`, used only without the override):
+
+- `0` (default): circular orbit near Sapporo (period 10 min, altitude
+  420 km). In the ground-station gate (35 km) for ~4 min, then ~6 min out of
+  range, repeating.
+- `1`: small fixed track over the ground station (Sapporo), gate stays open.
 - `2`: small fixed track over Tokyo, gate stays closed.
 
 Simulated environment (space-like):
@@ -59,7 +72,7 @@ on the RP2350-GEEK (USB only, no radio):
 | 02 | Fuzzing / Crash | Partial | Command accepted but transmission blocked (`RADIO DISABLED`) |
 | 03 | Command Injection | Yes | |
 | 04 | GPS Spoofing | Yes | `TC_GPS_OVERRIDE` (APID 0x14) injects a position over USB |
-| 05 | GS Auth Spoofing | Conditional | Needs GPS within ground-station range (Tsukuba, 100 km); default orbit enters range every 10 min, or use `GPS_MODE=1` |
+| 05 | GS Auth Spoofing | Conditional | Needs GPS within ground-station range (Sapporo, 35 km); spoof the position first with attack 04 |
 | 06 | Replay | Yes | |
 | 07 | RESETC | Yes | |
 
@@ -70,8 +83,9 @@ The BOOT button on the RP2350-GEEK controls the screen:
 - **Short press**: switch to the next page (page number shown at the top, e.g. `2/3`)
 - **Long press (1 s)**: flip the display 180 degrees (useful when the board is mounted upside down)
 
-The screen redraws at most twice a second. The flip also works during the
-boot screen (`WAIT USB CONSOLE`).
+The screen redraws at most twice a second. Both the page switch and the flip
+also work while the board waits for the USB console (`WAIT USB CONSOLE`):
+page 1 shows the boot screen, pages 2 and 3 the scoreboard and system pages.
 
 ### 1. Status
 
@@ -81,7 +95,7 @@ Main dashboard showing the overall satellite state at a glance.
 
 - **MODE**: current mission mode (`SAFE` / `NOMINAL` / `PAYLOAD` / `SCIENCE` / `CONTINGENCY`). Colour-coded: SAFE = yellow, NOMINAL = green, CONTINGENCY = red. An `ARM` badge appears when the payload is armed.
 - **USB**: connection status. `CON` (USB serial console) and `LINK` (radio-link emulation over USB) show green/red. `RADIO OFF` indicates radio hardware is compiled out. A `DBG` badge appears when USB debug is enabled.
-- **SNS**: sensor status. `BME` (BME280 temperature/humidity/pressure), `ACC` (LIS2DH12 accelerometer), `GPS` (fix / nofix / quiet / none). A `SIM` badge appears in simulated-sensor mode. `GS AUTH` or `GS ON` appears during ground-station authentication.
+- **SNS**: sensor status. `BME` (BME280 temperature/humidity/pressure), `ACC` (LIS2DH12 accelerometer), `GPS` (fix / nofix / quiet / none). While the GPS override is active the GPS chip reads `GPS` followed by a yellow `OVR` badge. A `SIM` badge appears in simulated-sensor mode. `GS AUTH` or `GS ON` appears during ground-station authentication.
 - **LAST CMD**: last received command name, source (USB / RF), and time elapsed. The entire row highlights yellow for 1.5 s after reception.
 - **TM**: telemetry packet count and environment (temperature, pressure; shows `vacuum` when pressure < 1 hPa).
 - **Position**: GPS coordinates (latitude / longitude / altitude). Altitude is shown in km when above 10 km.
@@ -142,14 +156,26 @@ GPL-2.0-or-later.
   (status page, attack scoreboard, system info, 180-degree flip via MADCTL).
   SPI1 pins: DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25
 - `orbit_sim.h`, `sensors.cpp` with `FLATSAT_SIM_SENSORS`: simulated BME280,
-  LIS2DH12 and GPS (Tsukuba circular orbit for GEEK, ISS-like orbit for
+  LIS2DH12 and GPS (Sapporo circular orbit for GEEK, ISS-like orbit for
   others; thermal model)
 - `platformio.ini`: RP2350 / Pico 2 build environments
   (`pico2_tinyusb_norf`, `pico2_geek_norf`, `pico2_geek_sim`)
 - `version.h`, `tools/gen_version.py`: build-time version injection
+- Ported from JP-Bootcamp firmware v1.0.5 (not behind a build flag, so
+  JP-Bootcamp's IDS, C3 and attack scripts work unchanged):
+  - `ids_events.h/.cpp`: one IDS event per received frame (TM APID `0x20`,
+    15 octets, cleartext, USB only)
+  - `usbCDC.cpp`: non-blocking TX with flush, RX reads only what arrived,
+    per-frame hexdump off by default (`-DFLATSAT_USB_HEXDUMP=1`), USB serial
+    `fsat-<chip id>` per board, product string `Pwnsat - Flatsat v<version>`
+  - `worker.cpp`: console writes are dropped instead of blocking when nobody
+    reads the console; the `FLASH_READ` window now holds the link key
+    (`MAINT:PROV_BLOCK=16`) for the flash-dump lab
+  - `SEND_FW` reports protocol level 1.0.5
 
-All modifications to existing files are wrapped in `#if FLATSAT_NO_RADIO`,
-`#if FLATSAT_LCD_GEEK` or `#if FLATSAT_SIM_SENSORS` guards. To see the full
+The GEEK/no-radio/simulation changes to existing files are wrapped in
+`#if FLATSAT_NO_RADIO`, `#if FLATSAT_LCD_GEEK` or `#if FLATSAT_SIM_SENSORS`
+guards. To see the full
 diff from the upstream import:
 
     git diff cecef5f..HEAD -- Firmware/

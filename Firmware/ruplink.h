@@ -19,4 +19,10 @@ typedef void (*radioPacketReceivedCb)(uint8_t *buffer, uint16_t buffer_len);
 void uplinkRadioConfigure(void);
 void uplinkRadioRegisterCb(radioPacketReceivedCb recv_cb);
 void uplinkRadioCheckPacketReceived(void);
+
+/* v1.0.5: what the radio measured on the last frame it handed up, for the
+ * IDS event channel. Zero until the first frame arrives. */
+float uplinkRadioLastRssi(void);
+float uplinkRadioLastSnr(void);
+bool uplinkRadioLastCrcBad(void);
 #endif // FIRMWARE_RUPLINK_H
