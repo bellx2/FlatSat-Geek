@@ -5,6 +5,8 @@
 Waveshare RP2350-GEEK 向けに改変した Pwnsat/FlatSat ファームウェア。
 ラジオハードウェアなし、1.14" LCD にステータス画面を表示。
 
+<img src="docs/device-photo.jpg" width="480" alt="FlatSat-Geek を動かしている RP2350-GEEK (LCD にステータス画面)">
+
 [Pwnsat/FlatSat](https://github.com/Pwnsat/FlatSat) (GPL-2.0-or-later)
 をベースにしています。帰属表示と変更点は[ライセンス](#ライセンス)を参照。
 
@@ -74,6 +76,29 @@ RP2350-GEEK (USB のみ、ラジオなし) での
 | 05 | GS 認証スプーフィング | 条件付き | GPS が地上局範囲内 (札幌, 35 km) である必要あり。先に攻撃 04 で位置を偽装する |
 | 06 | リプレイ | 可 | |
 | 07 | RESETC | 可 | |
+
+## JP-Bootcamp
+
+v1.2.0 以降、このファームウェアは
+[JP-Bootcamp](https://github.com/bellx2/JP-Bootcamp) の講座用ファームウェア
+(v1.0.5) と同じプロトコルで動作し、JP-Bootcamp の Space IDS、PWNSAT-C3
+コンソール、攻撃スクリプトを RP2350-GEEK に対してそのまま使える。
+書き込むのは FlatSat-Geek の UF2。JP-Bootcamp の
+`flatsat-course-noradio-v1.0.5.uf2` は RP2040 向けのため RP2350 では動かない。
+
+| 項目 | 動作 |
+|---|---|
+| テレコマンド APID | JP-Bootcamp と同じ (0x01-0x14)。`GPS_OVERRIDE` (0x14、13 オクテット) を含む |
+| IDS イベント | 受信フレームごとに TM APID 0x20 で 1 件 (15 オクテット、平文、USB のみ) |
+| 地上局 | 札幌 (北緯 43.0618、東経 141.3545、半径 35 km)。起動時の位置は東京なので、位置を偽装するまでゲートは閉じている |
+| フラッシュ窓 | 末尾に `MAINT:PROV_BLOCK=16` とリンク鍵 (フラッシュ吸い出し演習用) |
+| USB 識別子 | VID:PID `239A:CAFE`、シリアルはボードごとに `fsat-<チップID>` |
+
+JP-Bootcamp にない拡張: LCD 画面、センサーシミュレーション、
+`GPS_OVERRIDE` に 1 オクテットの `0x00` を送ると上書きを解除する機能。
+
+1 台の PC に複数のボードをつなぐ場合は、攻撃スクリプトの対象を
+`FLATSAT_SERIAL=fsat-<チップID>` (または `FLATSAT_PORT=<tty>`) で指定する。
 
 ## 画面ページ
 

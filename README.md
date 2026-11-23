@@ -5,6 +5,8 @@
 Pwnsat/FlatSat firmware, adapted for the Waveshare RP2350-GEEK: no radio hardware,
 and a status screen on the 1.14" LCD.
 
+<img src="docs/device-photo.jpg" width="480" alt="RP2350-GEEK running FlatSat-Geek, status page on the LCD">
+
 Based on [Pwnsat/FlatSat](https://github.com/Pwnsat/FlatSat)
 (GPL-2.0-or-later). See [License](#license) for attribution and a list of
 changes.
@@ -81,6 +83,29 @@ on the RP2350-GEEK (USB only, no radio):
 | 05 | GS Auth Spoofing | Conditional | Needs GPS within ground-station range (Sapporo, 35 km); spoof the position first with attack 04 |
 | 06 | Replay | Yes | |
 | 07 | RESETC | Yes | |
+
+## JP-Bootcamp
+
+Since v1.2.0 this firmware speaks the same protocol as the
+[JP-Bootcamp](https://github.com/r0r0x-xx/JP-Bootcamp) course firmware
+(v1.0.5), so its Space IDS, PWNSAT-C3 console and attack scripts can be used
+against the RP2350-GEEK without changes. Flash the FlatSat-Geek UF2 instead of
+JP-Bootcamp's `flatsat-course-noradio-v1.0.5.uf2`, which is built for the
+RP2040 and does not run on the RP2350.
+
+| Item | Behaviour |
+|---|---|
+| Telecommand APIDs | Same as JP-Bootcamp (0x01-0x14), including `GPS_OVERRIDE` (0x14, 13 octets) |
+| IDS event channel | One event per received frame on TM APID 0x20 (15 octets, cleartext, USB only) |
+| Ground station | Sapporo (43.0618N, 141.3545E, 35 km); the board boots at Tokyo, so the gate starts closed until the position is spoofed |
+| Flash window | Ends with `MAINT:PROV_BLOCK=16` and the link key, for the flash-dump lab |
+| USB identity | VID:PID `239A:CAFE`, serial `fsat-<chip id>` per board |
+
+Extensions that JP-Bootcamp does not have: the LCD screen, simulated sensors,
+and `GPS_OVERRIDE` with a 1-octet payload `0x00`, which clears the override.
+
+With several boards on one host, select one for the attack scripts with
+`FLATSAT_SERIAL=fsat-<chip id>` (or `FLATSAT_PORT=<tty>`).
 
 ## Screen pages
 
