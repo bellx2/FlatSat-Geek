@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - `TC_GPS_OVERRIDE` with a 1-octet payload `0x00` clears the override and
   returns to the simulated orbit (or the real GPS)
 - `OVR` chip on the LCD status page while the GPS override is active
+- GitHub Actions release workflow: pushing a `v*` tag builds `pico2_geek_sim`
+  and publishes the UF2 with the CHANGELOG section as release notes
 - Per-board USB serial number `fsat-<chip id>`; product string carries the
   firmware version
 

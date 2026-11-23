@@ -18,6 +18,12 @@ Flash: hold BOOTSEL while plugging in USB, copy the `.uf2` onto the drive.
 Prebuilt UF2s are attached to each
 [GitHub release](https://github.com/bellx2/FlatSat-Geek/releases).
 
+Release: bump `FW_VERSION` in `Firmware/version.h`, add the version to
+`CHANGELOG.md`, then push a matching tag (`git tag v1.2.0 && git push origin v1.2.0`).
+GitHub Actions (`.github/workflows/release.yml`) builds `pico2_geek_sim` and
+creates the release with the UF2 and that version's CHANGELOG section. The
+workflow stops if the tag does not match `FW_VERSION`.
+
 ## Simulated sensors (`pico2_geek_sim`)
 
 For a board with no sensors attached: BME280, LIS2DH12 and GPS values are

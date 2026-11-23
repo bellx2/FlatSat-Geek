@@ -17,6 +17,12 @@ Waveshare RP2350-GEEK 向けに改変した Pwnsat/FlatSat ファームウェア
 ビルド済み UF2 は
 [GitHub Releases](https://github.com/bellx2/FlatSat-Geek/releases) に添付。
 
+リリース手順: `Firmware/version.h` の `FW_VERSION` を上げて `CHANGELOG.md` に追記し、
+同じ番号のタグを push する (`git tag v1.2.0 && git push origin v1.2.0`)。
+GitHub Actions (`.github/workflows/release.yml`) が `pico2_geek_sim` をビルドし、
+UF2 と CHANGELOG の該当節を載せたリリースを作る。タグと `FW_VERSION` が
+一致しない場合はワークフローが止まる。
+
 ## センサーシミュレーション (`pico2_geek_sim`)
 
 センサー未接続のボード用。BME280、LIS2DH12、GPS の値をシミュレート
