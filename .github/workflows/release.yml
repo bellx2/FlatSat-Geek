@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: Firmware
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # gen_version.py がコミット数を数えるため全履歴が必要
 
@@ -29,11 +29,11 @@ jobs:
           fi
           echo "FW_VERSION=$fw" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ hashFiles('Firmware/platformio.ini') }}
