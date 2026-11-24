@@ -12,7 +12,7 @@
 #ifndef FIRMWARE_VERSION_H
 #define FIRMWARE_VERSION_H
 
-#define FW_VERSION "1.2.1"
+#define FW_VERSION "1.3.0"
 
 #if defined(__has_include)
 #if __has_include("version_gen.h")

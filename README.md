@@ -1,11 +1,13 @@
-# FlatSat-Geek
+# StickSat
 
 [Japanese / 日本語](README_ja.md)
+
+Formerly **FlatSat-Geek** (renamed in v1.3.0).
 
 Pwnsat/FlatSat firmware, adapted for the Waveshare RP2350-GEEK: no radio hardware,
 and a status screen on the 1.14" LCD.
 
-<img src="docs/device-photo.jpg" width="480" alt="RP2350-GEEK running FlatSat-Geek, status page on the LCD">
+<img src="docs/device-photo.jpg" width="480" alt="RP2350-GEEK running StickSat, status page on the LCD">
 
 Based on [Pwnsat/FlatSat](https://github.com/Pwnsat/FlatSat)
 (GPL-2.0-or-later). See [License](#license) for attribution and a list of
@@ -18,7 +20,7 @@ Build (needs PlatformIO):
 
 Flash: hold BOOTSEL while plugging in USB, copy the `.uf2` onto the drive.
 Prebuilt UF2s are attached to each
-[GitHub release](https://github.com/bellx2/FlatSat-Geek/releases).
+[GitHub release](https://github.com/bellx2/StickSat/releases).
 
 Release: bump `FW_VERSION` in `Firmware/version.h`, add the version to
 `CHANGELOG.md`, then push a matching tag (`git tag v1.2.0 && git push origin v1.2.0`).
@@ -89,7 +91,7 @@ on the RP2350-GEEK (USB only, no radio):
 Since v1.2.0 this firmware speaks the same protocol as the
 [JP-Bootcamp](https://github.com/r0r0x-xx/JP-Bootcamp) course firmware
 (v1.0.5), so its Space IDS, PWNSAT-C3 console and attack scripts can be used
-against the RP2350-GEEK without changes. Flash the FlatSat-Geek UF2 instead of
+against the RP2350-GEEK without changes. Flash the StickSat UF2 instead of
 JP-Bootcamp's `flatsat-course-noradio-v1.0.5.uf2`, which is built for the
 RP2040 and does not run on the RP2350.
 

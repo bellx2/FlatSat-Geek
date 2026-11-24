@@ -1,11 +1,13 @@
-# FlatSat-Geek
+# StickSat
 
 [English](README.md)
+
+旧名 **FlatSat-Geek**（v1.3.0 で改名）。
 
 Waveshare RP2350-GEEK 向けに改変した Pwnsat/FlatSat ファームウェア。
 ラジオハードウェアなし、1.14" LCD にステータス画面を表示。
 
-<img src="docs/device-photo.jpg" width="480" alt="FlatSat-Geek を動かしている RP2350-GEEK (LCD にステータス画面)">
+<img src="docs/device-photo.jpg" width="480" alt="StickSat を動かしている RP2350-GEEK (LCD にステータス画面)">
 
 [Pwnsat/FlatSat](https://github.com/Pwnsat/FlatSat) (GPL-2.0-or-later)
 をベースにしています。帰属表示と変更点は[ライセンス](#ライセンス)を参照。
@@ -13,11 +15,11 @@ Waveshare RP2350-GEEK 向けに改変した Pwnsat/FlatSat ファームウェア
 ビルド (PlatformIO が必要):
 
     cd Firmware
-    pio run -e pico2_geek_norf        # -> .pio/build/pico2_geek_norf/flatsat-*.uf2
+    pio run -e pico2_geek_norf        # -> .pio/build/pico2_geek_norf/sticksat-*.uf2
 
 書き込み: BOOTSEL を押しながら USB 接続し、`.uf2` をドライブにコピー。
 ビルド済み UF2 は
-[GitHub Releases](https://github.com/bellx2/FlatSat-Geek/releases) に添付。
+[GitHub Releases](https://github.com/bellx2/StickSat/releases) に添付。
 
 リリース手順: `Firmware/version.h` の `FW_VERSION` を上げて `CHANGELOG.md` に追記し、
 同じ番号のタグを push する (`git tag v1.2.0 && git push origin v1.2.0`)。
@@ -83,7 +85,7 @@ v1.2.0 以降、このファームウェアは
 [JP-Bootcamp](https://github.com/bellx2/JP-Bootcamp) の講座用ファームウェア
 (v1.0.5) と同じプロトコルで動作し、JP-Bootcamp の Space IDS、PWNSAT-C3
 コンソール、攻撃スクリプトを RP2350-GEEK に対してそのまま使える。
-書き込むのは FlatSat-Geek の UF2。JP-Bootcamp の
+書き込むのは StickSat の UF2。JP-Bootcamp の
 `flatsat-course-noradio-v1.0.5.uf2` は RP2040 向けのため RP2350 では動かない。
 
 | 項目 | 動作 |

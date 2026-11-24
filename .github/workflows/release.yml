@@ -57,6 +57,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            ".pio/build/pico2_geek_sim/flatsat-pico2_geek_sim-v$FW_VERSION.uf2" \
+            ".pio/build/pico2_geek_sim/sticksat-pico2_geek_sim-v$FW_VERSION.uf2" \
             --title "$GITHUB_REF_NAME" \
             --notes-file "$RUNNER_TEMP/notes.md"

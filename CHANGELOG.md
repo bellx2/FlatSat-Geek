@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-11-25
+
+### Changed
+- Renamed from FlatSat-Geek to StickSat. The repository is now
+  `bellx2/StickSat` (the old URL redirects)
+- LCD boot screen and status header read `STICKSAT` instead of
+  `FLATSAT - Geek`
+- UF2 output is named `sticksat-<env>-v<version>.uf2` (was `flatsat-...`)
+- Unchanged for compatibility with JP-Bootcamp and existing host tools: the
+  USB manufacturer/product strings (`Pwnsat`, `Pwnsat - Flatsat v...`), the
+  `fsat-<chip id>` serial number, and the `FLATSAT_*` build flags
+
 ## [1.2.1] - 2026-11-24
 
 ### Fixed

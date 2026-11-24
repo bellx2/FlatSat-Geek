@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-FlatSat-Geek is a **vulnerable-by-design satellite trainer** (Pwnsat/FlatSat) adapted for the **Waveshare RP2350-GEEK** board. It is a teaching tool for space-security exercises: students attack the satellite over USB using CCSDS Space Packet Protocol (SPP) commands.
+StickSat is a **vulnerable-by-design satellite trainer** (Pwnsat/FlatSat) adapted for the **Waveshare RP2350-GEEK** board. It is a teaching tool for space-security exercises: students attack the satellite over USB using CCSDS Space Packet Protocol (SPP) commands.
 
 The radio hardware (two SX1262 modules) is compiled out (`FLATSAT_NO_RADIO`). All command/telemetry traffic goes over USB CDC. A 1.14" ST7789 LCD shows live status.
 
@@ -84,4 +84,4 @@ When GS mode is enabled, most commands require GPS fix within ground-station ran
 - License: GPL-2.0-or-later. All new files need the SPDX header.
 - Packet byte order: SPP headers are big-endian (use `HOST_TO_BE16`/`BE_TO_HOST16`); telemetry payload fields are little-endian (use `bufferPackU16LE` etc.).
 - LCD pin mapping is from the RP2350-GEEK schematic: DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25.
-- UF2 binaries are not tracked in git. Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`, which builds `pico2_geek_sim` and creates the release (the tag must match `FW_VERSION` in `version.h`). `gen_version.py` names the output with the version (e.g. `flatsat-pico2_geek_sim-v1.1.2.uf2`).
+- UF2 binaries are not tracked in git. Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`, which builds `pico2_geek_sim` and creates the release (the tag must match `FW_VERSION` in `version.h`). `gen_version.py` names the output with the version (e.g. `sticksat-pico2_geek_sim-v1.3.0.uf2`).

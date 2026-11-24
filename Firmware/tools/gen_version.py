@@ -52,4 +52,4 @@ if os.path.exists(version_h):
             fw_version = m.group(1)
 
 env_name = env.subst("$PIOENV")  # noqa: F821
-env.Replace(PROGNAME="flatsat-%s-v%s" % (env_name, fw_version))  # noqa: F821
+env.Replace(PROGNAME="sticksat-%s-v%s" % (env_name, fw_version))  # noqa: F821
