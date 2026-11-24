@@ -67,6 +67,7 @@ Key build flags: `-DFLATSAT_NO_RADIO=1`, `-DFLATSAT_LCD_GEEK=1`, `-DFLATSAT_SIM_
 - **`usbCDC.h/.cpp`** — dual USB CDC: `Serial` (console) + `USBRadioLink` (SPP frame transport).
 - **`radio_off.h/.cpp`** — holds SX1262 chips in hardware reset when `FLATSAT_NO_RADIO=1`.
 - **`orbit_sim.h`** — header-only: circular orbit model (position) + thermal model (temperature cycling). Pure C++, no Arduino dependency.
+- **`tools/lcd_render/`** — host-side renderer: compiles `lcd_status.cpp` against stubs and writes `docs/screen-*.png` (`tools/lcd_render/render_screens.sh`). `platformio.ini` excludes `tools/` from the firmware build.
 - **`version.h` + `tools/gen_version.py`** — PlatformIO pre-build script injects git commit count, hash, and build date into `version_gen.h`.
 
 ### Command flow

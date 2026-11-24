@@ -161,6 +161,23 @@ RP2350-GEEK の BOOT ボタンで画面を操作:
 - **VERSION**: ファームウェアバージョン (`version.h` の `FW_VERSION`) + ビルド番号 (git コミット数) + git ハッシュ (ローカル変更がある場合は `+` 付き)
 - **BUILT**: ビルド日時 (`tools/gen_version.py` により自動生成)
 
+### 画面画像の再生成
+
+上の画像は、実際の `lcd_status.cpp` をホスト PC でコンパイルして描画したもの
+(`Firmware/tools/lcd_render/`) で、ファームの表示とピクセル単位で一致する。
+画面を変更したら次のコマンドで作り直す:
+
+```bash
+cd Firmware
+pio pkg install -e pico2_geek_sim      # 初回のみ: Adafruit GFX を取得
+tools/lcd_render/render_screens.sh     # ../docs/screen-*.png に出力
+```
+
+ホスト用の C++ コンパイラと zlib が必要 (`CXX` でコンパイラを変更できる)。
+引数で出力先ディレクトリを指定できる。表示するミッション・センサーの状態は
+`render.cpp` に固定した例。VERSION / BUILT は直前の `pio run` で生成された
+`version_gen.h` の値になる。
+
 ## ライセンス
 
 本プロジェクトは **GNU General Public License v2.0 or later**

@@ -169,6 +169,23 @@ Detailed system information.
 - **VERSION**: firmware version (`FW_VERSION` in `version.h`) + build number (git commit count) + git short hash (`+` appended if the working tree had local changes)
 - **BUILT**: build date and time (all filled in automatically by `tools/gen_version.py`)
 
+### Regenerating the screenshots
+
+The images above are rendered on the host from the real `lcd_status.cpp`
+(`Firmware/tools/lcd_render/`), so they match the firmware pixel for pixel.
+After changing the screen, regenerate them:
+
+```bash
+cd Firmware
+pio pkg install -e pico2_geek_sim      # first time only: fetches Adafruit GFX
+tools/lcd_render/render_screens.sh     # writes ../docs/screen-*.png
+```
+
+It needs a host C++ compiler and zlib (`CXX` overrides the compiler). An
+optional argument sets the output directory. The mission and sensor state shown
+is a fixed example in `render.cpp`. VERSION / BUILT come from the
+`version_gen.h` of the last `pio run`.
+
 ## License
 
 This project is licensed under the **GNU General Public License v2.0 or later**
