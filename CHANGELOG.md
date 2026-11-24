@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-11-24
+
+### Fixed
+- `AES_CONFIG` and `DEBUG_CONFIG` never updated the LCD: both return from
+  `commandHandlerInternal()` before `commandApidHandler()`, so `LAST CMD`
+  and the command counter stayed unchanged and the `AES CFG` milestone could
+  not light. They now call `lcdStatusNoteCommand()` once accepted
+
 ## [1.2.0] - 2026-11-23
 
 ### Added

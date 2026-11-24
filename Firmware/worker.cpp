@@ -1778,6 +1778,9 @@ static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
         idsEventEmit(&event, IDS_RESULT_SOURCE_REJECT);
         return;
       }
+      // These two APIDs return before commandApidHandler(), so note them
+      // here for the LCD (LAST CMD and the AES CFG milestone).
+      lcdStatusNoteCommand(apid, (uint8_t)source);
       commandDebugConfigHandler(new_state);
       idsEventFinish(&event, handler_refused);
       return;
@@ -1793,6 +1796,7 @@ static void commandHandlerInternal(uint8_t *buffer, uint16_t buffer_len,
       idsEventEmit(&event, IDS_RESULT_GATE_REJECT);
       return;
     }
+    lcdStatusNoteCommand(apid, (uint8_t)source);
     commandAesConfigHandler(new_state);
     idsEventFinish(&event, handler_refused);
     return;
