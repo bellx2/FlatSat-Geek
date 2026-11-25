@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.9"
-# dependencies = ["pyserial>=3.5"]
+# dependencies = ["pyserial>=3.5", "cryptography>=42"]
 # ///
 #
 # board_check.py - functional check for a StickSat board.
@@ -9,7 +9,7 @@
 # Talks to the board over USB only and checks the things the operator cannot
 # see on the screen: USB identity and version, command/telemetry round trips,
 # the IDS event channel, periodic telemetry, and the factory-fresh state
-# (NOMINAL mode, AES/debug off, GPS override at Tokyo, GS mode off).
+# (NOMINAL mode, AES secure link on, debug off, GPS override at Tokyo, GS mode off).
 # It sends read-only commands only; nothing on the board is changed.
 #
 #   tools/board_check.py                 # auto-detect the board
@@ -29,6 +29,7 @@ import threading
 import time
 
 import serial
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from serial.tools import list_ports
 
 USB_VID = 0x239A
@@ -68,8 +69,31 @@ BOOT_LAT, BOOT_LON = 35.7122, 139.7038  # GPS override at boot (Tokyo)
 GS_LAT, GS_LON, GS_RADIUS_M = 43.0618, 141.3545, 35000  # Sapporo
 TM_PERIOD_S = 14  # radio_tm_interval_ms
 
+# Secure link (secure_link.cpp): AES-128-ECB over <len BE16> + data, zero
+# padded to 16 octets. On at boot; IDS events are always cleartext.
+SECURE_LINK_KEY = b"PWNsatLabKey1234"
+
 REPLY_TIMEOUT_S = 1.0
 PING_LATENCY_LIMIT_S = 0.2
+
+
+def secure_encode(data):
+    plain = struct.pack(">H", len(data)) + data
+    plain += b"\x00" * (-len(plain) % 16)
+    enc = Cipher(algorithms.AES(SECURE_LINK_KEY), modes.ECB()).encryptor()
+    return enc.update(plain) + enc.finalize()
+
+
+def secure_decode(data):
+    """Plaintext of a secure-link payload, or None if it is not one."""
+    if not data or len(data) % 16:
+        return None
+    dec = Cipher(algorithms.AES(SECURE_LINK_KEY), modes.ECB()).decryptor()
+    plain = dec.update(data) + dec.finalize()
+    n = struct.unpack(">H", plain[:2])[0]
+    if n > len(plain) - 2 or any(plain[2 + n:]):
+        return None
+    return plain[2:2 + n]
 
 
 def firmware_version():
@@ -91,7 +115,9 @@ class Link:
         self.ser.dtr = True
         self.buf = bytearray()
         self.seq = 0
+        self.secure = True  # the board boots with the secure link on
         self.received = []  # (time, apid, payload) of every TM frame seen
+        self.encrypted_tm = 0  # TM frames that arrived encrypted
 
     def close(self):
         self.ser.close()
@@ -99,6 +125,8 @@ class Link:
     def send(self, apid, payload=b""):
         if not payload:
             payload = b"\x00"  # SPP data field is at least one octet
+        if self.secure:
+            payload = secure_encode(payload)
         ident = (1 << 12) | (apid & 0x7FF)  # version 0, TC, no secondary header
         self.seq = (self.seq + 1) & 0x3FFF
         spp = struct.pack(">HHH", ident, (0b11 << 14) | self.seq, len(payload) - 1) + payload
@@ -125,6 +153,11 @@ class Link:
             apid = ident & 0x7FF
             payload = bytes(self.buf[7:total])
             del self.buf[:total]
+            if apid != TM_IDS_EVENT:
+                plain = secure_decode(payload)
+                if plain is not None:
+                    payload = plain
+                    self.encrypted_tm += 1
             frames.append((time.monotonic(), apid, payload))
 
     def poll(self):
@@ -264,7 +297,10 @@ def main():
     link = Link(link_port)
     try:
         time.sleep(0.5)  # let the board finish booting once the console is open
+        # Drop replies left over from an earlier session (the OS keeps them buffered).
+        link.ser.reset_input_buffer()
         link.drain()
+        link.received.clear()
 
         print("== Commands")
         frame, lat = link.request(TC_PING, TM_PING)
@@ -296,7 +332,7 @@ def main():
             r.check("mode NOMINAL", mode == 1, MODE_NAMES.get(mode, str(mode)))
             r.check("BME280 OK", bool(flags & FLAG_BME_OK))
             r.check("accelerometer OK", bool(flags & FLAG_ACC_OK))
-            r.check("AES secure link off", not flags & FLAG_SECURE_LINK)
+            r.check("AES secure link on", bool(flags & FLAG_SECURE_LINK))
             r.check("payload not armed", not flags & FLAG_PAYLOAD_ARMED)
             r.check("USB debug off", not flags & FLAG_USB_DEBUG)
             print("  uptime  %d s" % le_u32(p, 12))

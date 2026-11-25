@@ -35,7 +35,7 @@ It covers what you cannot see on the screen: the USB identity and
 firmware version, replies to the read-only commands (PING, SEND_FW,
 GET_STATUS, GET_NAV, GET_PAYLOAD_STATUS, GS_STATUS), the IDS events, 20 PING
 round trips, the periodic telemetry, and the state of a freshly booted board
-(NOMINAL, AES and debug off, GPS override at Tokyo, GS mode off). It changes
+(NOMINAL, AES secure link on, debug off, GPS override at Tokyo, GS mode off). It changes
 nothing on the board. Needs [uv](https://docs.astral.sh/uv/).
 
     cd Firmware

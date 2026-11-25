@@ -33,8 +33,8 @@ UF2 と CHANGELOG の該当節を載せたリリースを作る。タグと `FW_
 確認するスクリプト。画面では分からない次の項目を確認する: USB の識別情報と
 ファームウェアバージョン、読み出し専用コマンド (PING, SEND_FW, GET_STATUS,
 GET_NAV, GET_PAYLOAD_STATUS, GS_STATUS) の応答、IDS イベント、PING 20 回の往復、
-定期テレメトリ、起動直後の状態 (NOMINAL、AES とデバッグが無効、GPS 上書きが東京、
-GS モード無効)。ボードの状態は変更しない。[uv](https://docs.astral.sh/uv/) が必要。
+定期テレメトリ、起動直後の状態 (NOMINAL、AES セキュアリンクが有効、デバッグが無効、
+GPS 上書きが東京、GS モード無効)。ボードの状態は変更しない。[uv](https://docs.astral.sh/uv/) が必要。
 
     cd Firmware
     tools/board_check.py                # または: uv run tools/board_check.py
