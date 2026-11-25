@@ -22,7 +22,7 @@ build=$(mktemp -d)
 trap 'rm -rf "$build"' EXIT
 
 ${CXX:-c++} -std=c++17 -w -DARDUINO=10800 \
-  -DFLATSAT_LCD_GEEK=1 -DFLATSAT_NO_RADIO=1 -DFLATSAT_GPS_OVERRIDE=1 -DFLATSAT_SIM_SENSORS=1 \
+  -DPICO_RP2350=1 -DFLATSAT_LCD_GEEK=1 -DFLATSAT_NO_RADIO=1 -DFLATSAT_GPS_OVERRIDE=1 -DFLATSAT_SIM_SENSORS=1 \
   -I "$here/stub" -I "$fw" -I "$gfx" \
   "$here/render.cpp" "$gfx/Adafruit_GFX.cpp" -lz -o "$build/render"
 

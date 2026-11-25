@@ -1,6 +1,6 @@
 /*  - lcd_status.cpp
  *
- * Status screen for the Waveshare RP2350-GEEK.
+ * Status screen for the Waveshare RP2350-GEEK and RP2040-GEEK (same LCD wiring).
  *
  * Pins (from the RP2350-GEEK schematic, not yet confirmed on hardware):
  *   DC=GP8  CS=GP9  CLK=GP10 (SPI1 SCK)  MOSI=GP11 (SPI1 TX)  RST=GP12  BL=GP25
@@ -28,8 +28,13 @@
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 #include "hardware/watchdog.h"
+#include "hardware/structs/watchdog.h"
+#if PICO_RP2350
 #include "hardware/structs/powman.h"
 #include "hardware/regs/powman.h"
+#else
+#include "hardware/structs/vreg_and_chip_reset.h"
+#endif
 
 #define LCD_DC 8
 #define LCD_CS 9
@@ -113,9 +118,22 @@ static void milestone(int id) {
 }
 
 static void captureResetReason(void) {
+  const bool soft_reset = watchdog_hw->scratch[0] == LCD_SOFT_RESET_MAGIC;
+  watchdog_hw->scratch[0] = 0;
+#if PICO_RP2350
   if (watchdog_caused_reboot()) {
     reset_reason = "watchdog / soft reset";
   } else {
+#else
+  /* On RP2040 watchdog_caused_reboot() is also true after the bootrom reboots
+   * into a freshly copied UF2, so only RESETC's marker means a soft reset. */
+  if (watchdog_caused_reboot() && soft_reset) {
+    reset_reason = "watchdog / soft reset";
+  } else if (watchdog_caused_reboot()) {
+    reset_reason = "bootloader reboot";
+  } else {
+#endif
+#if PICO_RP2350
     const uint32_t r = powman_hw->chip_reset;
     if (r & POWMAN_CHIP_RESET_HAD_POR_BITS) {
       reset_reason = "power-on";
@@ -126,6 +144,17 @@ static void captureResetReason(void) {
     } else {
       reset_reason = "other";
     }
+#else
+    /* RP2040: a brown-out also sets HAD_POR. */
+    const uint32_t r = vreg_and_chip_reset_hw->chip_reset;
+    if (r & VREG_AND_CHIP_RESET_CHIP_RESET_HAD_POR_BITS) {
+      reset_reason = "power-on";
+    } else if (r & VREG_AND_CHIP_RESET_CHIP_RESET_HAD_RUN_BITS) {
+      reset_reason = "RUN pin";
+    } else {
+      reset_reason = "other";
+    }
+#endif
   }
 }
 

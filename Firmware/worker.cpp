@@ -7,6 +7,7 @@
  */
 
 #include "hardware/watchdog.h"
+#include "hardware/structs/watchdog.h"
 #include "ids_events.h"
 #include "lcd_status.h"
 #include "led.h"
@@ -229,7 +230,10 @@ static uint8_t crc8_compute(const uint8_t *data, uint32_t len) {
   return crc;
 }
 
-static void softwareReset() { watchdog_reboot(0, 0, 0); }
+static void softwareReset() {
+  watchdog_hw->scratch[0] = LCD_SOFT_RESET_MAGIC;
+  watchdog_reboot(0, 0, 0);
+}
 
 static inline int16_t float_to_fixed(float val, float scale) {
   return (int16_t)(val * scale);

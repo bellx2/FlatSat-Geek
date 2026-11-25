@@ -41,8 +41,8 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio
 
-      - name: Build pico2_geek_sim
-        run: pio run -e pico2_geek_sim
+      - name: Build pico2_geek_sim and pico_geek_sim
+        run: pio run -e pico2_geek_sim -e pico_geek_sim
 
       # CHANGELOG.md の該当バージョンの節をリリースノートにする
       - name: Extract release notes
@@ -58,5 +58,6 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" \
             ".pio/build/pico2_geek_sim/sticksat-pico2_geek_sim-v$FW_VERSION.uf2" \
+            ".pio/build/pico_geek_sim/sticksat-pico_geek_sim-v$FW_VERSION.uf2" \
             --title "$GITHUB_REF_NAME" \
             --notes-file "$RUNNER_TEMP/notes.md"

@@ -25,6 +25,8 @@ static spi_inst_t spi1_inst;
 spi_inst_t *spi1 = &spi1_inst;
 static powman_hw_t powman_inst = {POWMAN_CHIP_RESET_HAD_POR_BITS};
 powman_hw_t *powman_hw = &powman_inst;
+static watchdog_hw_t watchdog_inst = {};
+watchdog_hw_t *watchdog_hw = &watchdog_inst;
 
 static unsigned long now_ms = 0;
 unsigned long millis(void) { return now_ms; }

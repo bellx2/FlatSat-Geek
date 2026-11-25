@@ -10,7 +10,7 @@
 
 void radioHoldInReset(void) {
 #if FLATSAT_LCD_GEEK
-  /* RP2350-GEEK has no radio hardware, and the LCD uses GP8-12 and GP25,\n   * which overlap this firmware's radio pin map. Drive nothing. */
+  /* The GEEK boards have no radio hardware, and the LCD uses GP8-12 and GP25,\n   * which overlap this firmware's radio pin map. Drive nothing. */
   return;
 #endif
   /* RESET low, and keep it low. The SX1262 stays in reset while the board is

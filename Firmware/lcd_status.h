@@ -1,6 +1,6 @@
 /*  - lcd_status.h
  *
- * Status screen for the Waveshare RP2350-GEEK (1.14" 240x135 LCD).
+ * Status screen for the Waveshare RP2350-GEEK / RP2040-GEEK (1.14" 240x135 LCD).
  * Compiled in only with -DFLATSAT_LCD_GEEK=1; otherwise every call is a no-op.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -8,6 +8,10 @@
 #ifndef FIRMWARE_LCD_STATUS_H
 #define FIRMWARE_LCD_STATUS_H
 #include <Arduino.h>
+
+/* RESETC writes this to watchdog scratch[0] before rebooting, so the LCD can
+ * tell it from the bootrom's own watchdog reboot after a UF2 copy (RP2040). */
+#define LCD_SOFT_RESET_MAGIC 0x52535443u /* "RSTC" */
 
 #if FLATSAT_LCD_GEEK
 

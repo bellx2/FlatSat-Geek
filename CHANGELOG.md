@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-11-25
+
+### Added
+- RP2040-GEEK builds: `pico_geek_norf` and `pico_geek_sim`. The board has
+  the same LCD wiring as the RP2350-GEEK; releases now attach
+  `sticksat-pico_geek_sim-v<version>.uf2` next to the RP2350 UF2
+
+### Changed
+- The LCD reset reason reads the RP2040 reset register on RP2040 (POWMAN
+  exists only on the RP2350). On RP2040 the bootrom's watchdog reboot after a
+  UF2 copy shows as `bootloader reboot` instead of `watchdog / soft reset`:
+  RESETC now leaves a marker in watchdog scratch[0] that tells the two apart
+
 ## [1.3.0] - 2026-11-25
 
 ### Changed

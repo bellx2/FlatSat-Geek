@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-StickSat is a **vulnerable-by-design satellite trainer** (Pwnsat/FlatSat) adapted for the **Waveshare RP2350-GEEK** board. It is a teaching tool for space-security exercises: students attack the satellite over USB using CCSDS Space Packet Protocol (SPP) commands.
+StickSat is a **vulnerable-by-design satellite trainer** (Pwnsat/FlatSat) adapted for the **Waveshare RP2350-GEEK** board (and the pin-compatible **RP2040-GEEK**). It is a teaching tool for space-security exercises: students attack the satellite over USB using CCSDS Space Packet Protocol (SPP) commands.
 
 The radio hardware (two SX1262 modules) is compiled out (`FLATSAT_NO_RADIO`). All command/telemetry traffic goes over USB CDC. A 1.14" ST7789 LCD shows live status.
 
@@ -26,6 +26,10 @@ pio run -e pico2_geek_norf
 
 # Same + simulated sensors (no hardware needed)
 pio run -e pico2_geek_sim
+
+# RP2040-GEEK (same LCD wiring, RP2040 chip)
+pio run -e pico_geek_norf
+pio run -e pico_geek_sim
 
 # Pico 2, no radio, no LCD
 pio run -e pico2_tinyusb_norf
@@ -46,6 +50,8 @@ Prebuilt UF2s are attached to GitHub releases. Flash by holding BOOTSEL and copy
 | `pico2_tinyusb_norf` | Pico 2 (RP2350) | no | no | real |
 | `pico2_geek_norf` | RP2350-GEEK | no | yes | real |
 | `pico2_geek_sim` | RP2350-GEEK | no | yes | simulated |
+| `pico_geek_norf` | RP2040-GEEK | no | yes | real |
+| `pico_geek_sim` | RP2040-GEEK | no | yes | simulated |
 
 Key build flags: `-DFLATSAT_NO_RADIO=1`, `-DFLATSAT_LCD_GEEK=1`, `-DFLATSAT_SIM_SENSORS=1`.
 
@@ -85,5 +91,5 @@ When GS mode is enabled, most commands require GPS fix within ground-station ran
 
 - License: GPL-2.0-or-later. All new files need the SPDX header.
 - Packet byte order: SPP headers are big-endian (use `HOST_TO_BE16`/`BE_TO_HOST16`); telemetry payload fields are little-endian (use `bufferPackU16LE` etc.).
-- LCD pin mapping is from the RP2350-GEEK schematic: DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25.
-- UF2 binaries are not tracked in git. Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`, which builds `pico2_geek_sim` and creates the release (the tag must match `FW_VERSION` in `version.h`). `gen_version.py` names the output with the version (e.g. `sticksat-pico2_geek_sim-v1.3.0.uf2`).
+- LCD pin mapping is from the RP2350-GEEK schematic: DC=GP8 CS=GP9 CLK=GP10 MOSI=GP11 RST=GP12 BL=GP25 (same on the RP2040-GEEK). The reset reason on the System page reads POWMAN on RP2350 and VREG_AND_CHIP_RESET on RP2040 (`#if PICO_RP2350` in `lcd_status.cpp`).
+- UF2 binaries are not tracked in git. Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`, which builds `pico2_geek_sim` and `pico_geek_sim` and creates the release (the tag must match `FW_VERSION` in `version.h`). `gen_version.py` names the output with the version (e.g. `sticksat-pico2_geek_sim-v1.3.0.uf2`).

@@ -4,7 +4,7 @@
 
 旧名 **FlatSat-Geek**（v1.3.0 で改名）。
 
-Waveshare RP2350-GEEK 向けに改変した Pwnsat/FlatSat ファームウェア。
+Waveshare RP2350-GEEK / RP2040-GEEK 向けに改変した Pwnsat/FlatSat ファームウェア。
 ラジオハードウェアなし、1.14" LCD にステータス画面を表示。
 
 <img src="docs/device-photo.jpg" width="480" alt="StickSat を動かしている RP2350-GEEK (LCD にステータス画面)">
@@ -15,16 +15,20 @@ Waveshare RP2350-GEEK 向けに改変した Pwnsat/FlatSat ファームウェア
 ビルド (PlatformIO が必要):
 
     cd Firmware
-    pio run -e pico2_geek_norf        # -> .pio/build/pico2_geek_norf/sticksat-*.uf2
+    pio run -e pico2_geek_norf        # RP2350-GEEK -> .pio/build/pico2_geek_norf/sticksat-*.uf2
+    pio run -e pico_geek_norf         # RP2040-GEEK -> .pio/build/pico_geek_norf/sticksat-*.uf2
 
 書き込み: BOOTSEL を押しながら USB 接続し、`.uf2` をドライブにコピー。
 ビルド済み UF2 は
 [GitHub Releases](https://github.com/bellx2/StickSat/releases) に添付。
+RP2350-GEEK には `sticksat-pico2_geek_sim-*.uf2`、RP2040-GEEK には
+`sticksat-pico_geek_sim-*.uf2` (v1.3.1 以降) を使う。2 つのボードは LCD の配線が
+同じだが、チップが違うため UF2 は互いに動かない。
 
 リリース手順: `Firmware/version.h` の `FW_VERSION` を上げて `CHANGELOG.md` に追記し、
 同じ番号のタグを push する (`git tag v1.2.0 && git push origin v1.2.0`)。
-GitHub Actions (`.github/workflows/release.yml`) が `pico2_geek_sim` をビルドし、
-UF2 と CHANGELOG の該当節を載せたリリースを作る。タグと `FW_VERSION` が
+GitHub Actions (`.github/workflows/release.yml`) が `pico2_geek_sim` と
+`pico_geek_sim` をビルドし、両方の UF2 と CHANGELOG の該当節を載せたリリースを作る。タグと `FW_VERSION` が
 一致しない場合はワークフローが止まる。
 
 ## 動作確認
@@ -103,9 +107,9 @@ RP2350-GEEK (USB のみ、ラジオなし) での
 v1.2.0 以降、このファームウェアは
 [JP-Bootcamp](https://github.com/bellx2/JP-Bootcamp) の講座用ファームウェア
 (v1.0.5) と同じプロトコルで動作し、JP-Bootcamp の Space IDS、PWNSAT-C3
-コンソール、攻撃スクリプトを RP2350-GEEK に対してそのまま使える。
+コンソール、攻撃スクリプトを RP2350-GEEK / RP2040-GEEK に対してそのまま使える。
 書き込むのは StickSat の UF2。JP-Bootcamp の
-`flatsat-course-noradio-v1.0.5.uf2` は RP2040 向けのため RP2350 では動かない。
+`flatsat-course-noradio-v1.0.5.uf2` は LCD なしの RP2040 Pico 向けで、RP2350 では動かない。
 
 | 項目 | 動作 |
 |---|---|
@@ -218,7 +222,8 @@ tools/lcd_render/render_screens.sh     # ../docs/screen-*.png に出力
 - `orbit_sim.h`, `sensors.cpp` (`FLATSAT_SIM_SENSORS`): BME280、LIS2DH12、
   GPS のシミュレーション (GEEK は札幌付近の円軌道、その他は ISS 相当の軌道; 熱モデル)
 - `platformio.ini`: RP2350 / Pico 2 ビルド環境
-  (`pico2_tinyusb_norf`, `pico2_geek_norf`, `pico2_geek_sim`)
+  (`pico2_tinyusb_norf`, `pico2_geek_norf`, `pico2_geek_sim`) と RP2040-GEEK
+  用のビルド環境 (`pico_geek_norf`, `pico_geek_sim`)
 - `version.h`, `tools/gen_version.py`: ビルド時バージョン注入
 - JP-Bootcamp ファームウェア v1.0.5 から取り込み (ビルドフラグなし。
   JP-Bootcamp の IDS、C3、攻撃スクリプトをそのまま使える):
