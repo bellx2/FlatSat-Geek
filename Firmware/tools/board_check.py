@@ -23,7 +23,9 @@
 import argparse
 import os
 import re
+import shutil
 import struct
+import subprocess
 import sys
 import threading
 import time
@@ -105,6 +107,23 @@ def firmware_version():
             return m.group(1) if m else None
     except OSError:
         return None
+
+
+def port_users(device):
+    """Other processes holding device open, as "name (pid)" strings (needs lsof)."""
+    if not shutil.which("lsof"):
+        return []
+    try:
+        out = subprocess.run(["lsof", "-Fpc", device], capture_output=True, text=True).stdout
+    except OSError:
+        return []
+    users, pid = [], None
+    for line in out.splitlines():
+        if line.startswith("p"):
+            pid = int(line[1:])
+        elif line.startswith("c") and pid != os.getpid():
+            users.append("%s (pid %d)" % (line[1:], pid))
+    return users
 
 
 class Link:
@@ -277,6 +296,15 @@ def main():
     console_port, link_port, usb = find_board(args)
     r = Report()
 
+    # Another reader on the same port (an IDS, a C3 console, an attack script)
+    # takes the replies, so the checks would fail at random. Stop it first.
+    busy = [(port, user) for port in (console_port, link_port) if port for user in port_users(port)]
+    if busy:
+        print("Port in use by another process; close it and run again:")
+        for port, user in busy:
+            print("  %s: %s" % (port, user))
+        return 1
+
     print("== USB")
     if usb is not None:
         print("  serial  %s" % usb.serial_number)
@@ -382,6 +410,8 @@ def main():
             print("  waiting up to %d s for a telemetry frame..." % (TM_PERIOD_S + 2))
             seen = link.wait_for({TM_SEND_TM}, TM_PERIOD_S + 2) is not None
         r.check("telemetry frame (APID 0x08) received", seen)
+    except serial.SerialException as e:
+        r.check("serial link stayed usable", False, str(e))
     finally:
         link.close()
         if console:
