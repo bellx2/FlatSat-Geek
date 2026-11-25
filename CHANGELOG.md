@@ -2,22 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-### Added
-- `Firmware/tools/board_check.py`: functional check over USB (identity and
-  version, command replies, IDS events, PING round trips, periodic telemetry,
-  freshly booted state). Read-only, so the board is left as it was
-- `Firmware/tools/lcd_render/`: renders the LCD pages on the host from the
-  real `lcd_status.cpp` and writes `docs/screen-*.png`, so the README
-  screenshots can be regenerated whenever the screen changes
-
-### Changed
-- README screenshots regenerated with the new tool: they now show the actual
-  pixel font and the v1.3.0 screen (`STICKSAT` header, `OVR` badge)
-- `platformio.ini` excludes `tools/` from the firmware sources, since
-  `src_dir = .` would otherwise compile the host renderer into the firmware
-
 ## [1.3.0] - 2026-11-25
 
 ### Changed
@@ -29,6 +13,19 @@ All notable changes to this project will be documented in this file.
 - Unchanged for compatibility with JP-Bootcamp and existing host tools: the
   USB manufacturer/product strings (`Pwnsat`, `Pwnsat - Flatsat v...`), the
   `fsat-<chip id>` serial number, and the `FLATSAT_*` build flags
+- README screenshots regenerated with the new renderer: they now show the
+  actual pixel font and the v1.3.0 screen (`STICKSAT` header, `OVR` badge)
+- Device photo replaced with one of the v1.3.0 screen
+- `platformio.ini` excludes `tools/` from the firmware sources, since
+  `src_dir = .` would otherwise compile the host renderer into the firmware
+
+### Added
+- `Firmware/tools/board_check.py`: functional check over USB (identity and
+  version, command replies, IDS events, PING round trips, periodic telemetry,
+  freshly booted state). Read-only, so the board is left as it was
+- `Firmware/tools/lcd_render/`: renders the LCD pages on the host from the
+  real `lcd_status.cpp` and writes `docs/screen-*.png`, so the README
+  screenshots can be regenerated whenever the screen changes
 
 ## [1.2.1] - 2026-11-24
 
