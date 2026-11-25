@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `Firmware/tools/board_check.py`: functional check over USB (identity and
+  version, command replies, IDS events, PING round trips, periodic telemetry,
+  freshly booted state). Read-only, so the board is left as it was
 - `Firmware/tools/lcd_render/`: renders the LCD pages on the host from the
   real `lcd_status.cpp` and writes `docs/screen-*.png`, so the README
   screenshots can be regenerated whenever the screen changes

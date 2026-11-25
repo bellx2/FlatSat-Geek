@@ -28,6 +28,26 @@ GitHub Actions (`.github/workflows/release.yml`) builds `pico2_geek_sim` and
 creates the release with the UF2 and that version's CHANGELOG section. The
 workflow stops if the tag does not match `FW_VERSION`.
 
+## Functional check
+
+`Firmware/tools/board_check.py` checks that a flashed board works, over USB.
+It covers what you cannot see on the screen: the USB identity and
+firmware version, replies to the read-only commands (PING, SEND_FW,
+GET_STATUS, GET_NAV, GET_PAYLOAD_STATUS, GS_STATUS), the IDS events, 20 PING
+round trips, the periodic telemetry, and the state of a freshly booted board
+(NOMINAL, AES and debug off, GPS override at Tokyo, GS mode off). It changes
+nothing on the board. Needs [uv](https://docs.astral.sh/uv/).
+
+    cd Firmware
+    tools/board_check.py                # or: uv run tools/board_check.py
+
+It prints PASS/FAIL per check and exits non-zero on any failure. It expects
+the `pico2_geek_sim` build: without simulated sensors the BME280 and
+accelerometer checks fail. With several boards connected, pick one with
+`--serial fsat-<chip id>`. `--link` and `--console` set the ports by hand.
+The script ends by listing what the screen should show. Check that by eye,
+then replug the board to clear the counters.
+
 ## Simulated sensors (`pico2_geek_sim`)
 
 For a board with no sensors attached: BME280, LIS2DH12 and GPS values are
